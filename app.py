@@ -235,12 +235,48 @@ def _words(text):
 # --------------------------------------------------------------------------- #
 # Assistant training / corrections store
 # --------------------------------------------------------------------------- #
-CORR_FILE = os.path.join(HERE, "corrections.json")
+# Central store: set PSPE_CORR_FILE to a shared path (e.g. a network drive
+# \\server\share\pspe\corrections.json) so every user's app reads/writes the
+# same "assistant database" and everyone benefits from each other's teachings.
+CORR_FILE = os.environ.get("PSPE_CORR_FILE") or os.path.join(HERE, "corrections.json")
 _STOP = {"the", "a", "an", "is", "are", "to", "of", "for", "and", "or", "in",
          "on", "at", "which", "what", "where", "who", "how", "do", "does", "did",
          "can", "i", "me", "my", "we", "you", "it", "that", "this", "from", "as",
          "show", "tell", "find", "give", "share", "list", "get", "need", "want",
          "please", "object", "objects", "sap", "use", "used", "using", "with"}
+
+
+def _corr_is_shared():
+    return bool(os.environ.get("PSPE_CORR_FILE"))
+
+
+class _FileLock:
+    """Best-effort cross-process lock via an exclusive .lock file (SMB-safe)."""
+    def __init__(self, target):
+        self.lock = target + ".lock"
+
+    def __enter__(self):
+        import time as _t
+        try:
+            os.makedirs(os.path.dirname(self.lock) or ".", exist_ok=True)
+        except Exception:
+            pass
+        for _ in range(100):                       # ~5s max
+            try:
+                fd = os.open(self.lock, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+                os.close(fd)
+                return self
+            except FileExistsError:
+                _t.sleep(0.05)
+            except OSError:
+                return self                        # can't lock (e.g. perms) -> proceed
+        return self                                # proceed anyway (stale lock)
+
+    def __exit__(self, *exc):
+        try:
+            os.remove(self.lock)
+        except Exception:
+            pass
 
 
 def _load_corrections():
@@ -252,8 +288,15 @@ def _load_corrections():
 
 
 def _save_corrections(items):
-    with open(CORR_FILE, "w", encoding="utf-8") as fh:
+    """Atomic write so concurrent readers never see a half-written file."""
+    try:
+        os.makedirs(os.path.dirname(CORR_FILE) or ".", exist_ok=True)
+    except Exception:
+        pass
+    tmp = f"{CORR_FILE}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
         json.dump(items, fh, indent=1, ensure_ascii=False)
+    os.replace(tmp, CORR_FILE)
 
 
 def _keywords(text):
@@ -262,7 +305,7 @@ def _keywords(text):
 
 @app.route("/api/assistant/teachings")
 def api_assistant_teachings():
-    return jsonify({"teachings": _load_corrections()})
+    return jsonify({"teachings": _load_corrections(), "shared": _corr_is_shared()})
 
 
 @app.route("/api/assistant/teach", methods=["POST"])
@@ -274,7 +317,6 @@ def api_assistant_teach():
     obj = (payload.get("object") or "").strip()
     if not question or not obj:
         return jsonify({"ok": False, "error": "question and object are required"}), 400
-    items = _load_corrections()
     entry = {
         "id": str(int(_time.time() * 1000)),
         "question": question,
@@ -282,20 +324,24 @@ def api_assistant_teach():
         "object": obj,
         "type": (payload.get("type") or "").strip(),
         "note": (payload.get("note") or "").strip(),
+        "author": (payload.get("author") or "").strip(),
         "ts": _time.strftime("%Y-%m-%d %H:%M:%S"),
     }
-    # replace an existing teaching with identical keywords, else append
-    items = [i for i in items if i.get("keywords") != entry["keywords"]
-             or i.get("object", "").upper() != obj.upper()]
-    items.insert(0, entry)
-    _save_corrections(items[:500])
-    return jsonify({"ok": True, "teaching": entry})
+    with _FileLock(CORR_FILE):
+        items = _load_corrections()
+        # replace an existing teaching with identical keywords + object
+        items = [i for i in items if i.get("keywords") != entry["keywords"]
+                 or i.get("object", "").upper() != obj.upper()]
+        items.insert(0, entry)
+        _save_corrections(items[:1000])
+    return jsonify({"ok": True, "teaching": entry, "shared": _corr_is_shared()})
 
 
 @app.route("/api/assistant/teach/<tid>", methods=["DELETE"])
 def api_assistant_unteach(tid):
-    items = [i for i in _load_corrections() if i.get("id") != tid]
-    _save_corrections(items)
+    with _FileLock(CORR_FILE):
+        items = [i for i in _load_corrections() if i.get("id") != tid]
+        _save_corrections(items)
     return jsonify({"ok": True})
 
 
@@ -303,13 +349,79 @@ def api_assistant_unteach(tid):
 def api_assistant_teach_delete():
     """Delete multiple taught entries by id (or all when 'all' is true)."""
     payload = request.get_json(silent=True) or {}
-    if payload.get("all"):
-        _save_corrections([])
-        return jsonify({"ok": True, "teachings": []})
-    ids = set(payload.get("ids") or [])
-    items = [i for i in _load_corrections() if i.get("id") not in ids]
-    _save_corrections(items)
+    with _FileLock(CORR_FILE):
+        if payload.get("all"):
+            _save_corrections([])
+            return jsonify({"ok": True, "teachings": []})
+        ids = set(payload.get("ids") or [])
+        items = [i for i in _load_corrections() if i.get("id") not in ids]
+        _save_corrections(items)
     return jsonify({"ok": True, "teachings": items})
+
+
+# --------------------------------------------------------------------------- #
+# Assistant result feedback (thumbs down = demote, cross = hide)
+# --------------------------------------------------------------------------- #
+FB_FILE = os.environ.get("PSPE_FB_FILE") or os.path.join(
+    os.path.dirname(CORR_FILE), "feedback.json")
+
+
+def _load_feedback():
+    try:
+        with open(FB_FILE, "r", encoding="utf-8") as fh:
+            return json.load(fh) or []
+    except Exception:
+        return []
+
+
+def _save_feedback(items):
+    try:
+        os.makedirs(os.path.dirname(FB_FILE) or ".", exist_ok=True)
+    except Exception:
+        pass
+    tmp = f"{FB_FILE}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(items, fh, indent=1, ensure_ascii=False)
+    os.replace(tmp, FB_FILE)
+
+
+@app.route("/api/assistant/feedback")
+def api_assistant_feedback_list():
+    return jsonify({"feedback": _load_feedback()})
+
+
+@app.route("/api/assistant/feedback", methods=["POST"])
+def api_assistant_feedback():
+    """Record per-answer feedback.
+
+    action = 'down'  -> demote these objects for similar questions
+    action = 'hide'  -> never show these objects for similar questions
+    action = 'up'    -> clear any prior negative feedback for these objects
+    """
+    import time as _time
+    payload = request.get_json(silent=True) or {}
+    kws = _keywords(payload.get("question") or "")
+    objs = [str(o).strip() for o in (payload.get("objects") or []) if str(o).strip()]
+    action = (payload.get("action") or "").lower()
+    if not kws or not objs or action not in ("up", "down", "hide"):
+        return jsonify({"ok": False, "error": "question, objects and a valid action are required"}), 400
+
+    def same(f, obj):
+        return f.get("keywords") == kws and f.get("object", "").upper() == obj.upper()
+
+    with _FileLock(FB_FILE):
+        items = _load_feedback()
+        for obj in objs:
+            items = [f for f in items if not same(f, obj)]      # replace prior
+            if action in ("down", "hide"):
+                items.insert(0, {
+                    "id": str(int(_time.time() * 1000)) + obj[:4],
+                    "keywords": kws, "object": obj, "action": action,
+                    "author": (payload.get("author") or "").strip(),
+                    "ts": _time.strftime("%Y-%m-%d %H:%M:%S"),
+                })
+        _save_feedback(items[:3000])
+    return jsonify({"ok": True, "feedback": items})
 
 
 @app.route("/api/assistant/llm", methods=["GET"])

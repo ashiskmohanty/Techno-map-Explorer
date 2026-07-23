@@ -18,6 +18,7 @@ const State = {
   l1Filter: null,    // selected Level-1 process area (drill-down)
   sapConnected: false, // green header dot when a live SAP link exists
   teachings: [],     // user corrections that train the assistant
+  feedback: [],      // 👎/✕ feedback: demote or hide results for similar questions
 };
 
 /* single source of truth for the header connection dot */
@@ -1058,9 +1059,32 @@ function rankObjects(question, limit = 6) {
     return { o, score, hits: [...hits], acc, codeConfirmed: false, snippet: '' };
   }).filter(r => r.score > 0 && r.hits.length);
 
-  scored.sort((a, b) => b.acc - a.acc || b.score - a.score
+  // apply 👎/✕ feedback for similar questions: hide -> drop, down -> demote
+  const fb = feedbackMatch(question);
+  let arr = scored.filter(r => !fb.hide.has(r.o.name.toUpperCase()));
+  arr.forEach(r => { r.demoted = fb.down.has(r.o.name.toUpperCase()); });
+  arr.sort((a, b) => (a.demoted ? 1 : 0) - (b.demoted ? 1 : 0)
+    || b.acc - a.acc || b.score - a.score
     || (b.o.description || '').length - (a.o.description || '').length);
-  return scored.slice(0, limit);
+  return arr.slice(0, limit);
+}
+
+/* match 👎/✕ feedback to a question (by keyword overlap, stemmed) */
+function feedbackMatch(query) {
+  const hide = new Set(), down = new Set();
+  const qs = new Set([...new Set(tokenize(query))].map(stem));
+  if (!qs.size) return { hide, down };
+  (State.feedback || []).forEach(f => {
+    const kw = (f.keywords || []).map(stem);
+    if (!kw.length) return;
+    const matched = kw.filter(k => qs.has(k)).length;
+    if (matched >= 1 && (matched / kw.length >= 0.5 || matched >= 2)) {
+      const nm = (f.object || '').toUpperCase();
+      if (f.action === 'hide') hide.add(nm);
+      else if (f.action === 'down') down.add(nm);
+    }
+  });
+  return { hide, down };
 }
 
 function initAssistant() {
@@ -1083,13 +1107,33 @@ function initAssistant() {
   input.addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
 
   // detect whether an LLM is wired for generic-question understanding
-  State.assistant = { llm: false, sap: false };
+  State.assistant = { llm: false, sap: false, searchMs1: false };
+  // MS1-live search toggle (off by default = local only), remembered per browser
+  try { State.assistant.searchMs1 = localStorage.getItem('pspe.searchMs1') === '1'; } catch (e) {}
+  const liveToggle = document.getElementById('aLiveToggle');
+  const liveState = document.getElementById('aLiveState');
+  function reflectToggle() {
+    if (liveToggle) liveToggle.checked = State.assistant.searchMs1;
+    if (liveState) {
+      liveState.textContent = State.assistant.searchMs1 ? 'on · local + SAP MS1' : 'off · local only';
+      liveState.classList.toggle('on', State.assistant.searchMs1);
+    }
+  }
+  reflectToggle();
+  if (liveToggle) liveToggle.addEventListener('change', () => {
+    State.assistant.searchMs1 = liveToggle.checked;
+    try { localStorage.setItem('pspe.searchMs1', liveToggle.checked ? '1' : '0'); } catch (e) {}
+    reflectToggle();
+    if (liveToggle.checked) verifyConnection();   // refresh the connection dot
+  });
   fetch('/api/assistant/llm').then(r => r.ok ? r.json() : null)
     .then(s => { if (s) State.assistant.llm = !!s.available; }).catch(() => {});
   fetch('/api/sap/status').then(r => r.ok ? r.json() : null)
-    .then(s => { if (s) State.assistant.sap = !!(s.http_configured || (s.configured && s.pyrfc)); }).catch(() => {});
+    .then(s => { if (s) { State.assistant.sap = !!(s.http_configured || (s.configured && s.pyrfc)); State.assistant.user = s.user || ''; } }).catch(() => {});
   fetch('/api/assistant/teachings').then(r => r.ok ? r.json() : null)
-    .then(s => { if (s && s.teachings) State.teachings = s.teachings; }).catch(() => {});
+    .then(s => { if (s && s.teachings) { State.teachings = s.teachings; State.assistant.shared = !!s.shared; } }).catch(() => {});
+  fetch('/api/assistant/feedback').then(r => r.ok ? r.json() : null)
+    .then(s => { if (s && s.feedback) State.feedback = s.feedback; }).catch(() => {});
 
   function greet() {
     addBot(`Hi! Ask me in plain English and I'll match your words against the <b>descriptions</b>, `
@@ -1142,24 +1186,75 @@ function initAssistant() {
   function doSearch(displayQ, searchQ) {
     const taught = taughtFor(searchQ);
     const results = rankObjects(searchQ, 8);
+    const liveOn = !!(State.assistant && State.assistant.searchMs1);
     if (!results.length && !taught.length) {
-      if (State.assistant && State.assistant.sap) {
+      if (liveOn) {
         const b = addBot(`No match in the local catalogue — searching SAP MS1 live…`);
         addTeach(b, displayQ);
         enrichWithLiveSap(searchQ, [], b);
         return;
       }
-      const b = addBot(`I couldn't find a matching custom object for that. Try naming the action or data `
-        + `(e.g. "delete cube", "forecast revenue", "amendment", "cost rate").`);
+      const b = addBot(`I couldn't find a matching custom object locally. `
+        + `Turn on <b>🌐 Search SAP MS1 live</b> below to also query SAP, or try different words `
+        + `(e.g. "delete cube", "forecast revenue", "amendment").`);
       addTeach(b, displayQ);
       return;
     }
     const bubble = addBot('');
     bubble.innerHTML = renderTaught(taught) + '<div class="answer">' + renderResults(displayQ, results, false) + '</div>';
     rebindBubble(bubble);
+    addFeedback(bubble, displayQ);
     addTeach(bubble, displayQ);
     if (State.data && State.data.source === 'live') enrichWithComments(searchQ, results, bubble);
-    if (State.assistant && State.assistant.sap) enrichWithLiveSap(searchQ, results, bubble);
+    if (liveOn) enrichWithLiveSap(searchQ, results, bubble);
+  }
+
+  /* thumbs up / down / hide feedback under an answer */
+  function addFeedback(bubble, query) {
+    const bar = document.createElement('div');
+    bar.className = 'fbbar';
+    bar.innerHTML = `<button class="fbtn up" title="Good answer">👍</button>`
+      + `<button class="fbtn down" title="Not great — push these lower next time">👎</button>`
+      + `<button class="fbtn hide" title="Wrong — never show these for similar questions">✕</button>`
+      + `<span class="fbmsg"></span>`;
+    bubble.appendChild(bar);
+    const msg = bar.querySelector('.fbmsg');
+    const shownNames = () => [...bubble.querySelectorAll('.answer .rn')]
+      .map(a => a.dataset.name).filter(Boolean);
+
+    async function send(action, btn) {
+      const objects = shownNames();
+      if (!objects.length && action !== 'up') { msg.textContent = 'nothing to act on'; return; }
+      bar.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      try {
+        const r = await fetch('/api/assistant/feedback', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: query, objects, action, author: (State.assistant && State.assistant.user) || '' }),
+        });
+        const res = await r.json();
+        if (res.ok) State.feedback = res.feedback || State.feedback;
+      } catch (e) { /* keep local */ }
+      if (action === 'up') { msg.textContent = 'thanks!'; }
+      else if (action === 'down') { msg.textContent = 'noted — ranked lower next time'; }
+      else if (action === 'hide') {
+        msg.textContent = 'hidden for similar questions';
+        // remove them from the current answer immediately
+        const ans = bubble.querySelector('.answer');
+        const kill = new Set(shownNames());
+        if (ans) ans.querySelectorAll('.arow').forEach(row => {
+          const a = row.querySelector('.rn');
+          if (a && kill.has(a.dataset.name)) {
+            const next = row.nextElementSibling;
+            if (next && next.classList.contains('cmtline')) next.remove();
+            row.remove();
+          }
+        });
+      }
+    }
+    bar.querySelector('.up').addEventListener('click', e => send('up', e.currentTarget));
+    bar.querySelector('.down').addEventListener('click', e => send('down', e.currentTarget));
+    bar.querySelector('.hide').addEventListener('click', e => send('hide', e.currentTarget));
   }
 
   /* ---- training: match, render, submit corrections ---- */
@@ -1210,7 +1305,7 @@ function initAssistant() {
       try {
         const r = await fetch('/api/assistant/teach', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: query, object: obj, note }),
+          body: JSON.stringify({ question: query, object: obj, note, author: (State.assistant && State.assistant.user) || '' }),
         });
         const res = await r.json();
         if (res.ok && res.teaching) {
@@ -1285,13 +1380,17 @@ function initAssistant() {
       const r = await fetch('/api/assistant/teachings');
       const s = r.ok ? await r.json() : { teachings: [] };
       State.teachings = s.teachings || [];
+      State.assistant.shared = !!s.shared;
     } catch (e) { /* keep current */ }
     renderTeachList();
   }
 
   function renderTeachList() {
     const items = State.teachings || [];
-    tCount.textContent = `${items.length} taught entr${items.length === 1 ? 'y' : 'ies'}`;
+    const badge = State.assistant.shared
+      ? '<span class="ck" style="background:var(--ok)">● shared</span>'
+      : '<span class="ck" style="background:var(--muted2);color:#04231b">● local</span>';
+    tCount.innerHTML = `${badge} ${items.length} taught entr${items.length === 1 ? 'y' : 'ies'}`;
     tAll.checked = false;
     if (!items.length) { tList.innerHTML = '<div class="teach-empty">No taught entries yet. Correct an answer to teach the bot.</div>'; return; }
     tList.innerHTML = items.map(t => `<label class="trow2">
@@ -1300,7 +1399,7 @@ function initAssistant() {
         <div class="tobjn">${esc(t.object)}${t.type ? ' · ' + esc(t.type) : ''}</div>
         <div class="tq">Q: “${esc(t.question)}”</div>
         ${t.note ? `<div class="tnote2">📝 ${esc(t.note)}</div>` : ''}
-        <div class="tmeta">${esc(t.ts || '')} · keywords: ${esc((t.keywords || []).join(', '))}</div>
+        <div class="tmeta">${esc(t.ts || '')}${t.author ? ' · by ' + esc(t.author) : ''} · keywords: ${esc((t.keywords || []).join(', '))}</div>
       </div>
     </label>`).join('');
   }
@@ -1411,8 +1510,18 @@ async function enrichWithLiveSap(query, results, bubble) {
       body: JSON.stringify({ query, names }),
     });
     const res = r.ok ? await r.json() : null;
-    const objs = (res && res.objects) || [];
+    let objs = (res && res.objects) || [];
     const svcs = (res && res.services) || [];
+    const src = res && res.source;
+    // honour 👎/✕ feedback on live results too
+    const fb = feedbackMatch(query);
+    objs = objs.filter(o => !fb.hide.has((o.name || '').toUpperCase()));
+    objs.sort((a, b) => (fb.down.has((a.name || '').toUpperCase()) ? 1 : 0)
+      - (fb.down.has((b.name || '').toUpperCase()) ? 1 : 0));
+    if (src === 'offline' || src === 'http-offline') {
+      live.innerHTML = `<div class="livehdr" style="color:var(--muted2)">🌐 SAP MS1 live is on, but not connected — open ⚙ and Test connection.</div>`;
+      return;
+    }
     const pkgs = (res && res.packages) || ['ZPS_PROJ_EXEC', 'Z_PROF_SERVICES', 'ZCPM'];
     const scope = `<span style="font-weight:400;color:var(--muted)"> · packages ${esc(pkgs.join(' / '))}</span>`;
     if (!objs.length && !svcs.length) {
