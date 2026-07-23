@@ -942,8 +942,8 @@ const CUST_COLS = [
   { key: 'description', label: 'Description' },
   { key: 'category', label: 'Category' },
   { key: 'domain', label: 'Domain' },
-  { key: 'process', label: 'Process Area' },
   { key: 'primaryProcess', label: 'Primary Process' },
+  { key: 'process', label: 'Process Area' },
   { key: 'package', label: 'Package' },
   { key: 'validity', label: 'Validity' },
 ];
@@ -1153,8 +1153,8 @@ function renderCustTable() {
     <td class="muted" title="${esc(o.description)}">${esc(o.description)}</td>
     <td><span class="mini">${esc(o.category)}</span></td>
     <td><span class="tag ${o.domain}">${o.domain}</span></td>
-    <td>${esc(o.process)}</td>
     <td>${esc(o.primaryProcess || getL1(o.process))}</td>
+    <td>${esc(o.process)}</td>
     <td class="mono muted">${esc(o.package)}</td>
     <td>${valBadge(o.validity) || '<span class="muted">—</span>'}</td>
     ${State.isAdmin ? `<td><button class="btn-edit" data-name="${esc(o.name)}">✏️ Edit</button></td>` : ''}
