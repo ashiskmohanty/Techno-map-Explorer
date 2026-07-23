@@ -1216,10 +1216,43 @@ function updateMselLabel(col) {
 function renderCustPackages() {
   const el = document.getElementById('custPackages');
   if (!el) return;
-  const pkgs = (State.data && State.data.packages) || [];
-  el.innerHTML = pkgs.length
-    ? pkgs.map(p => `<span class="pkgchip">${esc(p)}</span>`).join('')
-    : '<span class="muted">not configured</span>';
+  const pkgs = ((State.data && State.data.packages) || []).slice();
+  el.innerHTML =
+    pkgs.map(p => `<span class="pkgchip" data-pkg="${esc(p)}">${esc(p)}<button class="pkgx" title="Remove ${esc(p)}" data-rm="${esc(p)}">×</button></span>`).join('')
+    + `<span class="pkgadd"><input id="pkgAddInput" placeholder="add package…" autocomplete="off"/><button id="pkgAddBtn" title="Add package">＋</button></span>`;
+  el.querySelectorAll('.pkgx').forEach(b =>
+    b.addEventListener('click', () => savePackages(pkgs.filter(p => p !== b.dataset.rm))));
+  const inp = document.getElementById('pkgAddInput');
+  const add = () => {
+    const v = (inp.value || '').trim().toUpperCase();
+    if (!v) return;
+    if (pkgs.map(p => p.toUpperCase()).includes(v)) { inp.value = ''; return; }
+    savePackages(pkgs.concat(v));
+  };
+  document.getElementById('pkgAddBtn').addEventListener('click', add);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+}
+
+async function savePackages(list) {
+  const clean = [];
+  list.forEach(p => { const v = (p || '').trim(); if (v && !clean.includes(v)) clean.push(v); });
+  try {
+    const r = await fetch('/api/sap/packages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packages: clean }),
+    });
+    const res = await r.json().catch(() => ({}));
+    if (r.ok && res.ok) {
+      if (!State.data) State.data = {};
+      State.data.packages = res.packages;
+      renderCustPackages();
+      toast(`SAP fetch scope: ${res.packages.length} package${res.packages.length !== 1 ? 's' : ''} · Refresh to fetch`);
+    } else {
+      toast(res.error || 'Could not update packages', true);
+    }
+  } catch (e) {
+    toast('Could not reach the backend to save packages', true);
+  }
 }
 
 function getCustRows() {

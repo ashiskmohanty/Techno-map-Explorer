@@ -204,7 +204,8 @@ def adt_search(query: str, cfg: Optional[Dict[str, Any]] = None,
 
 def fetch_all(cfg: Optional[Dict[str, Any]] = None,
               max_per_query: int = 400,
-              prefixes: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+              prefixes: Optional[List[str]] = None,
+              packages: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """Enumerate all custom (Z*/Y*) ABAP repository objects in the configured
     PS packages via ADT quickSearch (no SDK).
 
@@ -220,7 +221,8 @@ def fetch_all(cfg: Optional[Dict[str, Any]] = None,
     if not is_configured(cfg):
         return []
     allowed = {p.strip().upper() for p in
-               (cfg.get("packages") or ["ZPS_PROJ_EXEC", "Z_PROF_SERVICES", "ZCPM"])}
+               (packages or cfg.get("packages") or ["ZPS_PROJ_EXEC", "Z_PROF_SERVICES", "ZCPM"])
+               if str(p).strip()}
     # name-pattern queries: the two namespaces plus any explicit prefixes
     queries = ["Z*", "Y*"]
     for pref in list(prefixes or []) + list(cfg.get("objprefixes") or []):

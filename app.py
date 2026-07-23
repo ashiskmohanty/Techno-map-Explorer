@@ -55,7 +55,11 @@ def load_or_build():
         build_data.build()
     with open(path, "r", encoding="utf-8") as fh:
         data = json.load(fh)
-    return _apply_edits(_merge_manual(data))
+    data = _apply_edits(_merge_manual(data))
+    pkgs = _load_pkgs()
+    if pkgs:
+        data["packages"] = pkgs
+    return data
 
 
 # --------------------------------------------------------------------------- #
@@ -104,6 +108,27 @@ def _merge_manual(data):
 # --------------------------------------------------------------------------- #
 EDITS_FILE = os.environ.get("PSPE_EDITS_FILE") or os.path.join(HERE, "object_edits.json")
 AUDIT_FILE = os.environ.get("PSPE_AUDIT_FILE") or os.path.join(HERE, "audit_log.jsonl")
+PKGS_FILE = os.environ.get("PSPE_PKGS_FILE") or os.path.join(HERE, "sap_packages.json")
+
+
+def _load_pkgs():
+    """User-defined SAP fetch-scope packages, or None if not customised."""
+    try:
+        with open(PKGS_FILE, "r", encoding="utf-8") as fh:
+            v = json.load(fh)
+        if isinstance(v, list):
+            out = [str(x).strip() for x in v if str(x).strip()]
+            return out or None
+    except Exception:
+        pass
+    return None
+
+
+def _save_pkgs(pkgs):
+    tmp = f"{PKGS_FILE}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(pkgs, fh, indent=1, ensure_ascii=False)
+    os.replace(tmp, PKGS_FILE)
 
 
 def _load_edits():
@@ -262,6 +287,25 @@ def api_sap_status():
     st = sap_connect.status()
     st.update(sap_http.status())          # add SDK-free HTTP/OData readiness
     return jsonify(st)
+
+
+@app.route("/api/sap/packages", methods=["GET", "POST"])
+def api_sap_packages():
+    """Get or set the SAP fetch-scope packages used by Refresh (live ADT)."""
+    if request.method == "GET":
+        return jsonify({"ok": True, "packages": load_or_build().get("packages", [])})
+    p = request.get_json(silent=True) or {}
+    pkgs = p.get("packages")
+    if not isinstance(pkgs, list):
+        return jsonify({"ok": False, "error": "packages must be a list"}), 400
+    clean = []
+    for x in pkgs:
+        x = str(x).strip().upper()
+        if x and x not in clean:
+            clean.append(x)
+    _save_pkgs(clean)
+    _track("packages_set", n=len(clean))
+    return jsonify({"ok": True, "packages": clean})
 
 
 @app.route("/api/sap/config", methods=["POST"])
@@ -1067,11 +1111,13 @@ def _refresh_via_http():
     if not sap_http.is_configured():
         return None, "SAP MS1 HTTP endpoint is not configured."
     base = load_or_build()
+    # effective fetch scope: user-defined packages (SAP fetch scope) or default
+    scope = _load_pkgs() or base.get("packages") or list(build_data.PACKAGES)
     # known ABAP name prefixes -> targeted, package-scoped live discovery
     prefixes = sorted({o["name"][:5].upper()
                        for o in base["objects"]
                        if o.get("domain") == "ABAP" and len(o.get("name", "")) >= 5})
-    live = sap_http.fetch_all(prefixes=prefixes)
+    live = sap_http.fetch_all(prefixes=prefixes, packages=scope)
     if not live:
         return None, "SAP MS1 returned no live objects (ADT search empty)."
 
@@ -1099,6 +1145,7 @@ def _refresh_via_http():
     base["stats"] = build_data.build_stats(base["objects"], {})
     base["source"] = "live"
     base["generated"] = ts
+    base["packages"] = scope
     base["liveRefresh"] = {
         "at": ts, "abap_live": len(live), "added": added, "updated": updated,
     }
