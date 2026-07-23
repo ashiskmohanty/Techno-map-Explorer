@@ -852,10 +852,17 @@ function initCustom() {
   const labels = document.getElementById('custHeadLabels');
   const filters = document.getElementById('custHeadFilters');
   labels.innerHTML = CUST_COLS.map(c => `<th><div class="th-l" data-sort="${c.key}">${c.label} <span class="muted">⇅</span></div></th>`).join('');
-  filters.innerHTML = CUST_COLS.map(c => `<th><input data-col="${c.key}" placeholder="filter *"/></th>`).join('');
+  filters.innerHTML = CUST_COLS.map(c => MULTI_COLS.has(c.key)
+    ? `<th><div class="msel" data-col="${c.key}"><button type="button" class="msel-btn"><span class="msel-lbl">All</span><span>▾</span></button></div></th>`
+    : `<th><input data-col="${c.key}" placeholder="filter *"/></th>`).join('');
 
-  filters.querySelectorAll('input').forEach(inp =>
+  filters.querySelectorAll('input[data-col]').forEach(inp =>
     inp.addEventListener('input', () => { State.custFilters[inp.dataset.col] = inp.value; renderCustTable(); }));
+  filters.querySelectorAll('.msel .msel-btn').forEach(btn =>
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openMsel(btn.closest('.msel').dataset.col, btn);
+    }));
   labels.querySelectorAll('[data-sort]').forEach(th =>
     th.addEventListener('click', () => { sortCust(th.dataset.sort); }));
   document.getElementById('custSearch').addEventListener('input', e => { State.custSearch = e.target.value; renderCustTable(); });
@@ -879,7 +886,111 @@ function initCustom() {
   loadRefreshStatus();
 }
 
-/* current SAP fetch scope (packages) shown under the Custom Objects tab */
+/* columns filtered by a multi-select of their unique values */
+const MULTI_COLS = new Set(['category', 'domain', 'process', 'package', 'author', 'validity']);
+
+/* unique values (with counts) for a column, across the custom objects */
+function custUnique(col) {
+  const map = new Map();
+  State.objects.filter(o => o.custom).forEach(o => {
+    const v = (o[col] ?? '').toString();
+    map.set(v, (map.get(v) || 0) + 1);
+  });
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([value, count]) => ({ value, count }));
+}
+
+/* the shared, body-level popup so it escapes the table's overflow clipping */
+function _mselPop() {
+  let pop = document.getElementById('mselPop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'mselPop';
+    pop.className = 'msel-pop';
+    pop.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(pop);
+    document.addEventListener('click', closeMsel);
+    window.addEventListener('resize', closeMsel);
+    document.querySelector('.tablewrap')?.addEventListener('scroll', closeMsel);
+  }
+  return pop;
+}
+
+function closeMsel() {
+  const pop = document.getElementById('mselPop');
+  if (pop) { pop.classList.remove('open'); pop._col = null; }
+}
+
+function openMsel(col, btn) {
+  const pop = _mselPop();
+  if (pop.classList.contains('open') && pop._col === col) { closeMsel(); return; }
+  pop._col = col;
+  const cur = Array.isArray(State.custFilters[col]) ? State.custFilters[col] : [];
+  const sel = new Set(cur);
+  const vals = custUnique(col);
+  pop.innerHTML =
+    `<input class="msel-search" placeholder="Search values…"/>
+     <div class="msel-actions"><button data-a="all">Select all</button><button data-a="clear">Clear</button></div>
+     <div class="msel-list">${vals.map(v => mselOpt(v, sel)).join('') || '<div class="msel-empty">No values</div>'}</div>`;
+
+  const apply = () => {
+    const chosen = [...pop.querySelectorAll('.msel-opt input:checked')].map(i => i.value);
+    State.custFilters[col] = chosen;
+    updateMselLabel(col);
+    renderCustTable();
+  };
+  pop.querySelectorAll('.msel-opt input').forEach(i => i.addEventListener('change', apply));
+  pop.querySelector('[data-a="all"]').addEventListener('click', () => {
+    pop.querySelectorAll('.msel-list .msel-opt').forEach(o => {
+      if (o.style.display !== 'none') o.querySelector('input').checked = true;
+    });
+    apply();
+  });
+  pop.querySelector('[data-a="clear"]').addEventListener('click', () => {
+    pop.querySelectorAll('.msel-opt input').forEach(i => { i.checked = false; });
+    apply();
+  });
+  const search = pop.querySelector('.msel-search');
+  search.addEventListener('input', () => {
+    const q = search.value.toLowerCase();
+    pop.querySelectorAll('.msel-opt').forEach(o => {
+      o.style.display = o.dataset.v.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+  search.addEventListener('click', e => e.stopPropagation());
+
+  // position under the button (fixed), then keep on screen
+  const r = btn.getBoundingClientRect();
+  pop.style.visibility = 'hidden';
+  pop.classList.add('open');
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  let left = Math.min(r.left, window.innerWidth - pw - 8);
+  let top = r.bottom + 4;
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 4);
+  pop.style.left = Math.max(8, left) + 'px';
+  pop.style.top = top + 'px';
+  pop.style.visibility = '';
+  setTimeout(() => search.focus(), 0);
+}
+
+function mselOpt(v, sel) {
+  const label = v.value === '' ? '—' : v.value;
+  return `<label class="msel-opt" data-v="${esc(label)}">
+    <input type="checkbox" value="${esc(v.value)}" ${sel.has(v.value) ? 'checked' : ''}/>
+    <span class="mv">${esc(label)}</span><span class="msel-cnt">${v.count}</span></label>`;
+}
+
+function updateMselLabel(col) {
+  const m = document.querySelector(`.msel[data-col="${col}"]`);
+  if (!m) return;
+  const arr = State.custFilters[col];
+  const n = Array.isArray(arr) ? arr.length : 0;
+  const btn = m.querySelector('.msel-btn');
+  m.querySelector('.msel-lbl').textContent = n ? `${n} selected` : 'All';
+  btn.classList.toggle('active', n > 0);
+}
+
 function renderCustPackages() {
   const el = document.getElementById('custPackages');
   if (!el) return;
@@ -900,9 +1011,13 @@ function getCustRows() {
     const q = State.custSearch;
     rows = rows.filter(o => CUST_COLS.some(c => wildcard(q, o[c.key])) || wildcard(q, o.name));
   }
-  // per-column
-  Object.entries(State.custFilters).forEach(([col, pat]) => {
-    if (pat && pat.trim()) rows = rows.filter(o => wildcard(pat, o[col]));
+  // per-column: multi-select (array of exact values) or free-text wildcard
+  Object.entries(State.custFilters).forEach(([col, val]) => {
+    if (Array.isArray(val)) {
+      if (val.length) { const set = new Set(val); rows = rows.filter(o => set.has((o[col] ?? '').toString())); }
+    } else if (val && val.trim()) {
+      rows = rows.filter(o => wildcard(val, o[col]));
+    }
   });
   const s = State.custSort;
   rows.sort((a, b) => ((a[s.key] || '').toString().localeCompare((b[s.key] || '').toString())) * s.dir);

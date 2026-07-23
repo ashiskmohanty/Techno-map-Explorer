@@ -388,6 +388,29 @@ tbody tr:hover{background:var(--panel2)}
   border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11.5px;
   font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--text)}
 .pkgchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
+/* per-column multi-select filter */
+.msel-btn{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:5px 8px;color:var(--muted);font-size:11px;text-align:left;cursor:pointer;
+  display:flex;align-items:center;gap:6px;justify-content:space-between;white-space:nowrap}
+.msel-btn.active{border-color:var(--accent);color:var(--accent);font-weight:700}
+.msel-pop{position:fixed;z-index:120;width:250px;background:var(--panel);
+  border:1px solid var(--border);border-radius:11px;box-shadow:0 16px 40px rgba(0,0,0,.5);
+  padding:9px;display:none}
+.msel-pop.open{display:block}
+.msel-search{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:6px 9px;color:var(--text);font-size:12px;margin-bottom:7px;box-sizing:border-box}
+.msel-actions{display:flex;gap:7px;margin-bottom:7px}
+.msel-actions button{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:7px;
+  padding:5px;color:var(--muted);font-size:11px;cursor:pointer}
+.msel-actions button:hover{color:var(--text);border-color:var(--accent)}
+.msel-list{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.msel-opt{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;
+  font-size:12px;cursor:pointer;color:var(--text)}
+.msel-opt:hover{background:var(--panel2)}
+.msel-opt input{accent-color:var(--accent);flex:0 0 auto}
+.msel-opt .mv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msel-cnt{margin-left:auto;color:var(--muted);font-size:10.5px;flex:0 0 auto}
+.msel-empty{color:var(--muted);font-size:12px;padding:8px 6px}
 .afoot input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit}
 .afoot input:focus{outline:none;border-color:var(--accent)}
