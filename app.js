@@ -212,6 +212,8 @@ function applyData(data) {
   // manual objects can carry an L1 so their new sub-process shows under it
   State.l1Override = {};
   State.objects.forEach(o => { if (o.l1 && o.process) State.l1Override[o.process] = o.l1; });
+  // stamp each object's Primary Process (Level-1 tile) for the Custom table
+  State.objects.forEach(o => { o.primaryProcess = getL1(o.process); });
   State.edges.forEach(e => {
     if (RENAME[e.source]) e.source = RENAME[e.source];
     if (RENAME[e.target]) e.target = RENAME[e.target];
@@ -842,6 +844,7 @@ const CUST_COLS = [
   { key: 'category', label: 'Category' },
   { key: 'domain', label: 'Domain' },
   { key: 'process', label: 'Process Area' },
+  { key: 'primaryProcess', label: 'Primary Process' },
   { key: 'package', label: 'Package' },
   { key: 'author', label: 'Author' },
   { key: 'created', label: 'Created / Last Used' },
@@ -887,7 +890,7 @@ function initCustom() {
 }
 
 /* columns filtered by a multi-select of their unique values */
-const MULTI_COLS = new Set(['category', 'domain', 'process', 'package', 'author', 'validity']);
+const MULTI_COLS = new Set(['category', 'domain', 'process', 'primaryProcess', 'package', 'author', 'validity']);
 
 /* unique values (with counts) for a column, across the custom objects */
 function custUnique(col) {
@@ -1039,6 +1042,7 @@ function renderCustTable() {
     <td><span class="mini">${esc(o.category)}</span></td>
     <td><span class="tag ${o.domain}">${o.domain}</span></td>
     <td>${esc(o.process)}</td>
+    <td>${esc(o.primaryProcess || getL1(o.process))}</td>
     <td class="mono muted">${esc(o.package)}</td>
     <td>${esc(o.author)}</td>
     <td class="muted">${esc(o.created)}</td>
@@ -1054,7 +1058,7 @@ function exportExcel() {
   const aoa = [CUST_COLS.map(c => c.label)];
   rows.forEach(o => aoa.push(CUST_COLS.map(c => o[c.key] ?? '')));
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = CUST_COLS.map((c, i) => ({ wch: [34, 44, 18, 8, 20, 18, 14, 18, 10][i] || 16 }));
+  ws['!cols'] = CUST_COLS.map((c, i) => ({ wch: [34, 44, 18, 8, 20, 18, 18, 14, 18, 10][i] || 16 }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Custom Objects');
   const stamp = new Date().toISOString().slice(0, 10);
