@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "MS1(ABAP)",
+			"uri": "adt://ms1"
+		}
+	]
+}

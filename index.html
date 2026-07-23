@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PS Process Explorer &middot; SAP MS1/122</title>
+
+<!-- Charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Dependency / flow graph -->
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
+<!-- Excel export -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+:root{
+  --bg:#0b1020; --bg2:#111a33; --panel:#151f3d; --panel2:#1b284d;
+  --border:#25335f; --txt:#e8edff; --muted:#8ea0c9; --muted2:#6c7ca8;
+  --accent:#4f8cff; --accent2:#22d3ee; --ok:#2dd4a7; --warn:#f5b942;
+  --bad:#ff6b81; --purple:#a78bfa; --pink:#f472b6;
+  --abap:#4f8cff; --bw:#22d3ee;
+  --shadow:0 8px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:radial-gradient(1200px 600px at 15% -10%,#16224a 0%,transparent 60%),
+             radial-gradient(1000px 500px at 100% 0%,#0e2740 0%,transparent 55%),
+             var(--bg);
+  color:var(--txt); font-size:14px;
+}
+a{color:var(--accent)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#2a3a67;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- Header ---------- */
+header{
+  display:flex;align-items:center;gap:18px;padding:16px 26px;
+  background:linear-gradient(90deg,rgba(21,31,61,.9),rgba(11,16,32,.6));
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:40;
+  backdrop-filter:blur(8px);
+}
+.logo{
+  width:44px;height:44px;border-radius:12px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;font-weight:800;font-size:18px;color:#04122e;
+  box-shadow:0 6px 18px rgba(79,140,255,.4);
+}
+.brand h1{margin:0;font-size:18px;letter-spacing:.3px}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.env-pill{
+  margin-left:auto;display:flex;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--border);
+  padding:7px 14px;border-radius:20px;font-size:12px;color:var(--muted)
+}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);
+  box-shadow:0 0 0 4px rgba(45,212,167,.15)}
+.dot.offline{background:var(--muted2);box-shadow:none}
+
+/* ---------- Tabs ---------- */
+nav.tabs{
+  display:flex;gap:6px;padding:0 26px;background:rgba(11,16,32,.6);
+  border-bottom:1px solid var(--border);position:sticky;top:77px;z-index:30
+}
+.tab{
+  padding:14px 20px;cursor:pointer;color:var(--muted);font-weight:600;
+  border-bottom:2px solid transparent;user-select:none;white-space:nowrap;
+  display:flex;align-items:center;gap:8px
+}
+.tab:hover{color:var(--txt)}
+.tab.active{color:#fff;border-bottom-color:var(--accent)}
+.tab .badge{background:var(--panel2);color:var(--muted);border-radius:10px;
+  padding:1px 8px;font-size:11px;font-weight:700}
+.tab.active .badge{background:var(--accent);color:#04122e}
+
+main{padding:22px 26px 60px;max-width:1600px;margin:0 auto}
+.view{display:none;animation:fade .25s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- KPI cards ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+.kpi{
+  background:linear-gradient(160deg,var(--panel),var(--bg2));
+  border:1px solid var(--border);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden
+}
+.kpi::after{content:"";position:absolute;right:-20px;top:-20px;width:80px;height:80px;
+  border-radius:50%;background:radial-gradient(circle,rgba(79,140,255,.25),transparent 70%)}
+.kpi .k-label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+.kpi .k-val{font-size:30px;font-weight:800;margin-top:6px}
+.kpi .k-sub{color:var(--muted2);font-size:11px;margin-top:2px}
+.kpi.abap .k-val{color:var(--abap)} .kpi.bw .k-val{color:var(--bw)}
+.kpi.ok .k-val{color:var(--ok)} .kpi.warn .k-val{color:var(--warn)}
+
+/* ---------- Panels ---------- */
+.grid{display:grid;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px}
+.panel h3{margin:0 0 14px;font-size:14px;display:flex;align-items:center;gap:8px}
+.panel h3 .sub{color:var(--muted2);font-weight:500;font-size:12px;margin-left:auto}
+.charts-row{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-box{position:relative;height:240px}
+@media(max-width:1100px){.charts-row{grid-template-columns:1fr}}
+
+/* ---------- Toolbar ---------- */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.search{flex:1;min-width:220px;position:relative}
+.search input{width:100%;padding:11px 14px 11px 38px;border-radius:12px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--txt);font-size:14px;outline:none}
+.search input:focus{border-color:var(--accent)}
+.search svg{position:absolute;left:12px;top:11px;opacity:.5}
+select,.btn{
+  padding:10px 14px;border-radius:12px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--txt);font-size:13px;cursor:pointer;outline:none
+}
+.btn{font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),#3b6fe0);border:none;color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.green{background:linear-gradient(135deg,var(--ok),#1fae87);border:none;color:#04231b}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.chip{padding:5px 12px;border-radius:20px;background:var(--panel2);border:1px solid var(--border);
+  font-size:12px;cursor:pointer;color:var(--muted)}
+.chip.active{background:var(--accent);color:#04122e;border-color:transparent;font-weight:700}
+
+/* ---------- Process tiles ---------- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.tile{
+  background:linear-gradient(160deg,var(--panel),var(--bg2));border:1px solid var(--border);
+  border-radius:16px;padding:16px;cursor:pointer;transition:.18s;position:relative;overflow:hidden
+}
+.tile:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:var(--shadow)}
+.tile .t-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.tile .t-name{font-weight:700;font-size:15px;line-height:1.25}
+.tile .t-total{font-size:26px;font-weight:800;color:var(--accent)}
+.tile .t-bar{height:8px;border-radius:6px;background:var(--bg);overflow:hidden;display:flex;margin:12px 0 10px}
+.tile .t-bar i{display:block;height:100%}
+.tile .t-bar .a{background:var(--abap)} .tile .t-bar .b{background:var(--bw)}
+.tile .t-legend{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.tile .t-legend b{color:var(--txt)}
+.tile .t-cats{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px}
+.mini{font-size:10.5px;padding:2px 8px;border-radius:10px;background:var(--panel2);color:var(--muted)}
+
+/* ---------- L1 tiles + breadcrumb ---------- */
+.tile.l1{background:linear-gradient(160deg,#16264d,var(--bg2));border-color:#2b3f6e}
+.tile.l1::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent)}
+.tile.l1 .t-seq{width:34px;height:34px;flex:0 0 auto;border-radius:10px;display:grid;place-items:center;
+  font-weight:800;font-size:15px;color:#04122e;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.tile.l1 .t-icon{font-size:20px}
+.tile.l1 .t-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.tile .t-open{position:absolute;right:14px;bottom:12px;font-size:12px;color:var(--accent);opacity:.85}
+.crumb{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.crumb .back{cursor:pointer;border:1px solid var(--border);background:var(--panel);border-radius:9px;
+  padding:7px 12px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.crumb .back:hover{border-color:var(--accent)}
+.crumb .path{font-size:14px;color:var(--muted)}
+.crumb .path b{color:var(--txt)}
+
+/* ---------- Tree ---------- */
+.tree{font-size:13px}
+.tnode{margin:2px 0}
+.tnode .row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;cursor:default}
+.tnode .row.click{cursor:pointer}
+.tnode .row.click:hover{background:var(--panel2)}
+.tnode .caret{width:14px;display:inline-block;transition:.15s;color:var(--muted);cursor:pointer;user-select:none}
+.tnode.collapsed>.children{display:none}
+.tnode.collapsed>.row .caret{transform:rotate(-90deg)}
+.children{margin-left:16px;border-left:1px dashed var(--border);padding-left:8px}
+.pill{font-size:10px;padding:1px 7px;border-radius:8px;font-weight:700}
+.pill.abap{background:rgba(79,140,255,.18);color:#9cc0ff}
+.pill.bw{background:rgba(34,211,238,.16);color:#8fe9f5}
+.pill.fm{background:rgba(167,139,250,.18);color:#c9b8ff}
+.pill.cl{background:rgba(244,114,182,.16);color:#ffa8d6}
+.pill.ps{background:rgba(45,212,167,.16);color:#8ff0d6}
+.pill.pf{background:rgba(245,185,66,.16);color:#ffd88a}
+.tn-name{font-weight:600}
+.tn-desc{color:var(--muted2);font-size:11.5px;margin-left:6px}
+.badge-val{margin-left:auto;font-size:10px;padding:1px 8px;border-radius:8px}
+.v-valid{background:rgba(45,212,167,.16);color:#8ff0d6}
+.v-delete{background:rgba(255,107,129,.16);color:#ffb0bc}
+.v-review{background:rgba(245,185,66,.16);color:#ffd88a}
+
+/* ---------- Table ---------- */
+.tablewrap{overflow:auto;border:1px solid var(--border);border-radius:14px;max-height:65vh}
+table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:1000px}
+thead th{position:sticky;top:0;background:var(--panel2);z-index:5;text-align:left;
+  padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+thead th .th-l{font-weight:700;cursor:pointer;user-select:none;display:flex;gap:6px;align-items:center}
+thead th input{width:100%;margin-top:7px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg);color:var(--txt);font-size:11.5px;outline:none;font-weight:400}
+thead th input:focus{border-color:var(--accent)}
+tbody td{padding:8px 12px;border-bottom:1px solid rgba(37,51,95,.5);white-space:nowrap;
+  max-width:340px;overflow:hidden;text-overflow:ellipsis}
+tbody tr:hover{background:var(--panel2)}
+.tag{font-size:10.5px;padding:2px 9px;border-radius:10px;font-weight:700}
+.tag.ABAP{background:rgba(79,140,255,.18);color:#9cc0ff}
+.tag.BW{background:rgba(34,211,238,.16);color:#8fe9f5}
+.muted{color:var(--muted)} .mono{font-family:"Cascadia Code",Consolas,monospace}
+
+/* ---------- Detail overlay ---------- */
+.overlay{position:fixed;inset:0;background:rgba(4,8,20,.7);backdrop-filter:blur(4px);
+  z-index:60;display:none;align-items:stretch;justify-content:flex-end}
+.overlay.open{display:flex}
+.drawer{width:min(920px,94vw);background:var(--bg);border-left:1px solid var(--border);
+  height:100%;overflow:auto;box-shadow:-20px 0 60px rgba(0,0,0,.5);animation:slide .25s ease}
+@keyframes slide{from{transform:translateX(40px);opacity:.6}to{transform:none;opacity:1}}
+.drawer-head{position:sticky;top:0;background:linear-gradient(180deg,var(--panel),var(--bg));
+  padding:18px 22px;border-bottom:1px solid var(--border);z-index:5}
+.drawer-head .close{position:absolute;right:16px;top:16px;cursor:pointer;font-size:22px;color:var(--muted)}
+.drawer-head h2{margin:0;font-size:20px}
+.drawer-head p{margin:6px 0 0;color:var(--muted);font-size:13px}
+.drawer-body{padding:20px 22px}
+.d-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.d-kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+.d-kpi .v{font-size:22px;font-weight:800}.d-kpi .l{font-size:11px;color:var(--muted)}
+.sec-title{font-size:13px;font-weight:700;margin:20px 0 10px;display:flex;align-items:center;gap:8px;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.sec-title .line{flex:1;height:1px;background:var(--border)}
+#drawerGraph{height:300px;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
+
+/* ---------- Flow map: zoom tools + legend ---------- */
+.graph-wrap{position:relative}
+.graph-wrap #drawerGraph{height:440px;border-radius:12px 12px 0 0}
+.graph-tools{position:absolute;top:10px;right:10px;z-index:6;display:flex;gap:6px;align-items:center}
+.gbtn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:rgba(12,18,36,.86);
+  color:var(--txt);font-size:16px;font-weight:700;cursor:pointer;display:grid;place-items:center;
+  backdrop-filter:blur(4px);transition:.15s;line-height:1}
+.gbtn:hover{border-color:var(--accent);background:var(--accent);color:#04122e}
+.gbadge{font-size:11px;color:var(--muted);background:rgba(12,18,36,.86);border:1px solid var(--border);
+  padding:6px 9px;border-radius:8px;backdrop-filter:blur(4px)}
+.glegend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:9px 12px;font-size:11.5px;color:var(--muted);
+  border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;background:var(--panel)}
+.glegend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.glegend .ghint{margin-left:auto;font-style:italic;opacity:.8}
+
+/* ---------- SAP connection modal ---------- */
+.modal-back{position:fixed;inset:0;background:rgba(4,8,20,.72);backdrop-filter:blur(5px);
+  z-index:80;display:none;align-items:center;justify-content:center}
+.modal-back.open{display:flex}
+.modal{width:min(560px,94vw);max-height:92vh;overflow:auto;background:var(--bg);
+  border:1px solid var(--border);border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.6);
+  animation:slide .2s ease}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px}
+.modal-head h2{margin:0;font-size:17px;flex:1}
+.modal-head .close{cursor:pointer;font-size:22px;color:var(--muted)}
+.modal-body{padding:18px 22px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.form-grid .full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.field input{background:var(--panel);border:1px solid var(--border);border-radius:9px;
+  padding:9px 11px;color:var(--text);font-size:13px;font-family:inherit}
+.field input:focus{outline:none;border-color:var(--accent)}
+.modal-foot{display:flex;align-items:center;gap:10px;padding:16px 22px;
+  border-top:1px solid var(--border)}
+.conn-status{font-size:12.5px;padding:9px 12px;border-radius:10px;margin-bottom:14px;
+  border:1px solid var(--border);background:var(--panel);color:var(--muted);display:none}
+.conn-status.show{display:block}
+.conn-status.ok{border-color:var(--ok);color:#7ff0cf;background:rgba(45,212,167,.08)}
+.conn-status.err{border-color:#ef6a7a;color:#ffb3bd;background:rgba(239,106,122,.08)}
+.conn-status.info{border-color:var(--accent);color:#bcd2ff;background:rgba(79,140,255,.08)}
+
+/* ---------- Graph tab ---------- */
+#depGraph{height:640px;border:1px solid var(--border);border-radius:16px;background:
+  radial-gradient(600px 300px at 30% 10%,#13224a,transparent 60%),var(--bg2)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.note{background:rgba(245,185,66,.1);border:1px solid rgba(245,185,66,.3);color:#ffe0a3;
+  padding:12px 16px;border-radius:12px;font-size:12.5px;margin-bottom:16px;display:flex;gap:10px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel2);
+  border:1px solid var(--border);padding:12px 20px;border-radius:12px;z-index:80;box-shadow:var(--shadow);
+  display:none;align-items:center;gap:10px}
+.toast.show{display:flex;animation:fade .2s}
+.spin{width:16px;height:16px;border:2px solid var(--muted);border-top-color:var(--accent);
+  border-radius:50%;animation:rot .7s linear infinite;display:inline-block}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ---------- Object Finder assistant ---------- */
+.afab{position:fixed;right:22px;bottom:22px;z-index:70;width:58px;height:58px;border-radius:50%;
+  border:none;cursor:pointer;font-size:24px;color:#04122e;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:0 10px 28px rgba(79,140,255,.5);transition:.18s;display:grid;place-items:center}
+.afab:hover{transform:translateY(-3px) scale(1.04)}
+.apanel{position:fixed;right:22px;bottom:22px;z-index:75;width:min(430px,94vw);height:min(640px,86vh);
+  display:none;flex-direction:column;background:var(--bg);border:1px solid var(--border);
+  border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
+.apanel.open{display:flex}
+.ahead{display:flex;align-items:center;gap:10px;padding:14px 16px;
+  background:linear-gradient(180deg,var(--panel),var(--bg));border-bottom:1px solid var(--border)}
+.ahead .ai{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:18px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04122e;flex:0 0 auto}
+.ahead h3{margin:0;font-size:15px}
+.ahead p{margin:1px 0 0;font-size:11px;color:var(--muted)}
+.ahead .close{margin-left:auto;cursor:pointer;font-size:22px;color:var(--muted)}
+.abody{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--bg2)}
+.msg{max-width:92%;font-size:13px;line-height:1.5;padding:10px 13px;border-radius:12px;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--accent),#3b6fe0);color:#fff;border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:var(--panel);border:1px solid var(--border);color:var(--txt);border-bottom-left-radius:4px}
+.msg.bot .lead{color:var(--muted);margin-bottom:8px}
+.arow{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border);font-size:12.5px}
+.arow:last-child{border-bottom:none}
+.arow.best{background:rgba(79,140,255,.08);border-radius:7px;padding:6px 8px}
+.arow .dotd{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.arow .dotd.abap{background:#f472b6} .arow .dotd.bw{background:#4f8cff}
+.arow .rn{font-family:"Cascadia Code",Consolas,monospace;font-weight:700;color:#dfe7ff;cursor:pointer;text-decoration:none}
+.arow .rn:hover{color:var(--accent);text-decoration:underline}
+.arow .rc{color:var(--muted);font-size:11px;white-space:nowrap}
+.arow .rp{margin-left:auto;color:var(--muted2);font-size:11px}
+.cmtline{font-size:11px;color:#9fb4d8;margin:-2px 0 4px 16px;padding-left:8px;border-left:2px solid var(--ok)}
+.achips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.achip{font-size:11px;padding:5px 9px;border-radius:9px;border:1px solid var(--border);
+  background:var(--panel);color:var(--muted);cursor:pointer}
+.achip:hover{border-color:var(--accent);color:var(--txt)}
+.afoot{padding:11px 12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--panel)}
+.afoot input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit}
+.afoot input:focus{outline:none;border-color:var(--accent)}
+.afoot button{border:none;border-radius:10px;padding:0 14px;font-weight:700;cursor:pointer;
+  background:linear-gradient(135deg,var(--accent),#3b6fe0);color:#fff}
+.afoot button:disabled{opacity:.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PS</div>
+  <div class="brand">
+    <h1>PS Process Explorer</h1>
+    <p>Project System &middot; Professional Services &middot; Custom Object Intelligence</p>
+  </div>
+  <div class="env-pill" id="envPill" title="Configure SAP MS1 connection" style="cursor:pointer">
+    <span class="dot" id="connDot"></span><span id="envText">SAP MS1 / 122</span>
+    <span style="opacity:.7">⚙</span>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <div class="tab active" data-view="process">🧩 PS Process <span class="badge" id="bProc">0</span></div>
+  <div class="tab" data-view="depmap">🕸️ Dependency Map</div>
+  <div class="tab" data-view="tech">🌳 Technical Objects</div>
+  <div class="tab" data-view="custom">📦 Custom Objects <span class="badge" id="bCustom">0</span></div>
+</nav>
+
+<main>
+  <!-- ===================== PS PROCESS ===================== -->
+  <section class="view active" id="view-process">
+    <div class="kpis">
+      <div class="kpi"><div class="k-label">Process Areas</div><div class="k-val" id="kProc">0</div><div class="k-sub">functional groupings</div></div>
+      <div class="kpi ok"><div class="k-label">Custom Objects</div><div class="k-val" id="kCustom">0</div><div class="k-sub">Z / Y namespace</div></div>
+      <div class="kpi abap"><div class="k-label">ABAP Objects</div><div class="k-val" id="kAbap">0</div><div class="k-sub">FM · Class · Table</div></div>
+      <div class="kpi bw"><div class="k-label">BW-IP Objects</div><div class="k-val" id="kBw">0</div><div class="k-sub">Query · PlanSeq · PlanFunc</div></div>
+      <div class="kpi warn"><div class="k-label">Flagged Review/Delete</div><div class="k-val" id="kFlag">0</div><div class="k-sub">housekeeping</div></div>
+    </div>
+
+    <div id="bpmlNote" class="note" style="display:none"></div>
+
+    <div class="toolbar">
+      <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="procSearch" placeholder="Filter process areas… (use * as wildcard, e.g. *plan*)"/></div>
+      <div class="chip active" data-pf="all">All</div>
+      <div class="chip" data-pf="abap">ABAP only</div>
+      <div class="chip" data-pf="bw">BW only</div>
+      <select id="procSort">
+        <option value="total">Sort: Most objects</option>
+        <option value="name">Sort: Name (A–Z)</option>
+        <option value="abap">Sort: Most ABAP</option>
+        <option value="bw">Sort: Most BW</option>
+      </select>
+    </div>
+    <div class="crumb" id="procCrumb" style="display:none"></div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <!-- ===================== DEPENDENCY MAP ===================== -->
+  <section class="view" id="view-depmap">
+    <div class="toolbar">
+      <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="graphSearch" placeholder="Highlight object… (wildcard *)"/></div>
+      <select id="graphProc"><option value="">All process areas</option></select>
+      <button class="btn" id="graphZoomIn" title="Zoom in">＋</button>
+      <button class="btn" id="graphZoomOut" title="Zoom out">－</button>
+      <button class="btn" id="graphFit">⤢ Fit</button>
+      <button class="btn" id="graphReset">↺ Reset</button>
+      <span class="muted" id="graphInfo" style="margin-left:auto"></span>
+    </div>
+    <div id="depGraph"></div>
+    <div class="legend">
+      <span><i style="background:#4f8cff"></i> Planning Sequence</span>
+      <span><i style="background:#f5b942"></i> Planning Function</span>
+      <span><i style="background:#a78bfa"></i> Filter</span>
+      <span><i style="background:#22d3ee"></i> BEx Query</span>
+      <span><i style="background:#2dd4a7"></i> Aggregation / Provider</span>
+      <span><i style="background:#f472b6"></i> ABAP</span>
+      <span class="muted">— tip: click a node to focus its neighbourhood, drag to rearrange, scroll to zoom.</span>
+    </div>
+  </section>
+
+  <!-- ===================== TECHNICAL OBJECTS ===================== -->
+  <section class="view" id="view-tech">
+    <div class="toolbar">
+      <select id="techProc"><option value="">All process areas</option></select>
+      <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="techSearch" placeholder="Find object in tree… (wildcard *)"/></div>
+      <button class="btn" id="techExpand">⊕ Expand all</button>
+      <button class="btn" id="techCollapse">⊖ Collapse all</button>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr" id="techGrid">
+      <div class="panel">
+        <h3><span class="pill abap">ABAP</span> Function Module → Class → Method <span class="sub">Z / Y namespace</span></h3>
+        <div class="tree" id="abapTree"></div>
+      </div>
+      <div class="panel">
+        <h3><span class="pill bw">BW-IP</span> Planning Sequence → Function → Filter / Formula <span class="sub">Z / Y namespace</span></h3>
+        <div class="tree" id="bwTree"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CUSTOM OBJECTS ===================== -->
+  <section class="view" id="view-custom">
+    <div class="toolbar">
+      <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="custSearch" placeholder="Global search across all columns… (wildcard *)"/></div>
+      <button class="btn green" id="btnExport">⬇ Export to Excel</button>
+      <button class="btn primary" id="btnRefresh">⟳ Refresh from SAP MS1</button>
+      <span class="muted" id="custCount" style="margin-left:auto"></span>
+    </div>
+    <div class="tablewrap">
+      <table id="custTable">
+        <thead>
+          <tr id="custHeadLabels"></tr>
+          <tr id="custHeadFilters"></tr>
+        </thead>
+        <tbody id="custBody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Detail drawer -->
+<div class="overlay" id="overlay">
+  <div class="drawer">
+    <div class="drawer-head">
+      <span class="close" id="drawerClose">&times;</span>
+      <h2 id="dTitle">Process</h2>
+      <p id="dSub"></p>
+    </div>
+    <div class="drawer-body">
+      <div class="d-kpis" id="dKpis"></div>
+      <div class="sec-title"><span class="pill abap">ABAP</span> Object Hierarchy <span class="line"></span></div>
+      <div class="tree" id="dAbap"></div>
+      <div class="sec-title"><span class="pill bw">BW-IP</span> Object Hierarchy <span class="line"></span></div>
+      <div class="tree" id="dBw"></div>
+      <div class="sec-title">🔗 Local Dependency &amp; Flow Map <span class="line"></span></div>
+      <div class="graph-wrap">
+        <div class="graph-tools">
+          <button class="gbtn" id="dgZoomIn" title="Zoom in">＋</button>
+          <button class="gbtn" id="dgZoomOut" title="Zoom out">－</button>
+          <button class="gbtn" id="dgFit" title="Fit to view">⤢</button>
+          <button class="gbtn" id="dgReset" title="Reset layout">↺</button>
+          <span class="gbadge" id="dgInfo"></span>
+        </div>
+        <div id="drawerGraph"></div>
+        <div class="glegend">
+          <span><i style="background:#f472b6"></i> ABAP (FM/Class)</span>
+          <span><i style="background:#4f8cff"></i> Planning Seq</span>
+          <span><i style="background:#f5b942"></i> Planning Func</span>
+          <span><i style="background:#22d3ee"></i> BEx Query</span>
+          <span><i style="background:#a78bfa"></i> Filter</span>
+          <span class="ghint">Tip: hover a node to isolate its dependencies · scroll to zoom · drag to pan</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- SAP MS1 connection modal -->
+<div class="modal-back" id="sapModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span>🔌</span>
+      <h2>Connect to SAP MS1</h2>
+      <span class="close" id="sapClose">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="conn-status" id="sapStatus"></div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Application server host</label>
+          <input id="sapAshost" placeholder="ms1.your-domain.corp" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>System no.</label>
+          <input id="sapSysnr" placeholder="00" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>Client</label>
+          <input id="sapClient" placeholder="122" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>Language</label>
+          <input id="sapLang" placeholder="EN" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>User</label>
+          <input id="sapUser" placeholder="SAP user" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input id="sapPasswd" type="password" placeholder="••••••••" autocomplete="new-password"/>
+        </div>
+        <div class="field full">
+          <label>Development packages (comma separated)</label>
+          <input id="sapPackages" placeholder="ZPS_PROJ_EXEC, Z_PROF_SERVICES, ZCPM"/>
+        </div>
+      </div>
+      <p class="muted" style="font-size:11.5px;margin:14px 0 0">
+        Requires the backend (<span class="mono">python app.py</span>) with
+        <span class="mono">pyrfc</span> + the SAP NW RFC SDK installed. The password is
+        stored locally in <span class="mono">sap_config.json</span> on this machine only —
+        prefer the <span class="mono">SAP_PASSWD</span> environment variable for shared setups.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="sapTest">🔍 Test connection</button>
+      <button class="btn green" id="sapSave">💾 Save</button>
+      <button class="btn primary" id="sapSaveRefresh" style="margin-left:auto">💾 Save &amp; Refresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- Object Finder assistant -->
+<button class="afab" id="aFab" title="Ask the Object Finder">🤖</button>
+<div class="apanel" id="aPanel">
+  <div class="ahead">
+    <div class="ai">🤖</div>
+    <div>
+      <h3>Object Finder</h3>
+      <p>Ask what you need — I'll find the ABAP FM / BW object</p>
+    </div>
+    <span class="close" id="aClose">&times;</span>
+  </div>
+  <div class="abody" id="aBody"></div>
+  <div class="afoot">
+    <input id="aInput" placeholder="e.g. which FM deletes cube data? / forecast revenue query"/>
+    <button id="aSend">Ask</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

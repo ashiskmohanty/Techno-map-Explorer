@@ -1,0 +1,20 @@
+# --- Credentials (never commit) ---
+sap_config.json
+
+# --- SAP business data (kept local; regenerate with build_data.py) ---
+*.xlsx
+*.xls
+~$*
+data.json
+data.js
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Editor / OS ---
+.vscode/
+.DS_Store
+Thumbs.db

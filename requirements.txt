@@ -1,0 +1,10 @@
+# PS Process Explorer - backend dependencies
+Flask>=3.0
+openpyxl>=3.1        # read the .xlsx exports
+xlrd>=2.0            # read legacy .xls exports
+
+# --- Live SAP MS1 connection (optional) ---
+# Requires the SAP NetWeaver RFC SDK to be installed first, then:
+#   pip install pyrfc
+# Download the SDK from the SAP Support Portal (SAP note 2573790).
+pyrfc>=3.3 ; platform_system != "Darwin"

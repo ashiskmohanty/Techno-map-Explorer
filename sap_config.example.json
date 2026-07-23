@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy this file to sap_config.json and fill in your SAP MS1 details. For security, prefer leaving 'passwd' out of this file and setting the SAP_PASSWD environment variable instead. Any SAP_* environment variable overrides the value here.",
+
+  "ashost": "ms1.your-domain.corp",
+  "sysnr": "00",
+  "client": "122",
+  "user": "YOUR_SAP_USER",
+  "passwd": "",
+  "lang": "EN",
+
+  "_load_balanced_alternative": "Instead of ashost/sysnr you may use a message server: set mshost, msserv, group and sysid.",
+
+  "packages": ["ZPS_PROJ_EXEC", "Z_PROF_SERVICES", "ZCPM"]
+}
