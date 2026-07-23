@@ -1,10 +1,11 @@
 # PS Process Explorer - backend dependencies
 Flask>=3.0
+waitress>=3.0        # production WSGI server (Windows-friendly, any Python)
 openpyxl>=3.1        # read the .xlsx exports
 xlrd>=2.0            # read legacy .xls exports
 
 # --- Live SAP MS1 connection (optional) ---
-# Requires the SAP NetWeaver RFC SDK to be installed first, then:
-#   pip install pyrfc
-# Download the SDK from the SAP Support Portal (SAP note 2573790).
-pyrfc>=3.3 ; platform_system != "Darwin"
+# The SDK-free HTTPS/OData path needs nothing extra. For full RFC reads install
+# the SAP NetWeaver RFC SDK (SAP note 2573790), then, on a Python with a wheel
+# (e.g. 3.11/3.12):  pip install pyrfc
+# (left un-pinned here so it never blocks pip install / Docker builds.)

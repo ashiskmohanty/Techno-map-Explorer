@@ -1,0 +1,22 @@
+# --- keep secrets & business data out of the image ---
+sap_config.json
+corrections.json
+feedback.json
+usage.jsonl
+admin_config.json
+*.xlsx
+*.xls
+~$*
+data.json
+data.js
+
+# --- python / vcs / editor ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.git/
+.gitignore
+.vscode/
+.DS_Store
+Thumbs.db
