@@ -56,6 +56,11 @@ OBJECT_CATEGORY = {
     "SHLP": "Search Help",
     "TRAN": "Transaction",
     "MSAG": "Message Class",
+    "IWSV": "OData Service",
+    "IWSG": "OData Service Group",
+    "IWMO": "OData Model",
+    "IWPR": "OData Project (SEGW)",
+    "SIA1": "OData Service",
 }
 
 CUSTOM_PREFIXES = ("Z", "Y", "/CPD/", "/1CPMB/")
@@ -355,47 +360,150 @@ def where_used(names: List[str],
 
 
 # --------------------------------------------------------------------------- #
-# Code-comment search (ABAP source) - optional, live SAP only
+# Code / FOX comment search - optional, live SAP only
 # --------------------------------------------------------------------------- #
-def search_code_comments(names: List[str], tokens: List[str],
-                         cfg: Optional[Dict[str, Any]] = None,
-                         max_hits: int = 3) -> Dict[str, List[str]]:
-    """Scan ABAP source comment lines for the given search tokens.
+# BW-IP metadata tables (may need per-system adjustment). Best effort: each is
+# tried and any failure is ignored, so wrong names never break the search.
+FOX_PARAM_TABLE = "RSPLF_SRV_PARAM"      # planning-function parameters (holds FOX lines)
+FOX_DIR_TABLE = "RSPLF_FDIR"             # planning-function directory (type / service)
+SEQ_STEP_TABLE = "RSPLS_SEQ_STEP"        # planning-sequence steps -> functions
 
-    Returns { object_name: [matching comment lines...] }. Best effort:
-    reads report/include source through RPY_PROGRAM_READ; objects whose
-    source cannot be read (e.g. BW FOX formulas) are simply skipped.
-    Requires a configured, reachable SAP session.
+ABAP_CATS = {"Function Module", "Function Group", "Program", "Interface",
+             "Table Maintenance", "Method"}
+FOX_CATS = {"Planning Function", "Planning Sequence", "Filter",
+            "Aggregation Level", "InfoProvider"}
+
+
+def _scan_comments(lines: List[str], toks: List[str], max_hits: int = 3) -> List[str]:
+    """Return up to max_hits comment lines that contain any search token."""
+    hits: List[str] = []
+    for ln in lines:
+        stripped = (ln or "").strip()
+        if not stripped:
+            continue
+        is_comment = stripped.startswith("*") or '"' in ln  # ABAP/FOX comment
+        if not is_comment:
+            continue
+        low = ln.lower()
+        if any(t in low for t in toks):
+            if stripped.startswith("*"):
+                cleaned = stripped.lstrip("* ").strip()
+            else:
+                cleaned = stripped.split('"', 1)[-1].strip()
+            if cleaned:
+                hits.append(cleaned[:180])
+        if len(hits) >= max_hits:
+            break
+    return hits
+
+
+def _read_source(conn, program: str) -> List[str]:
+    """Read ABAP source lines for a program/include via RPY_PROGRAM_READ."""
+    res = conn.call("RPY_PROGRAM_READ", PROGRAM_NAME=program,
+                    WITH_INCLUDELIST=" ", ONLY_SOURCE="X")
+    src = res.get("SOURCE_EXTENDED") or res.get("SOURCE") or []
+    lines = []
+    for row in src:
+        lines.append(row.get("LINE", "") if isinstance(row, dict) else str(row))
+    return lines
+
+
+def _read_class_source(conn, clsname: str) -> List[str]:
+    """Best-effort read of a global class: class pool + method includes."""
+    lines: List[str] = []
+    name30 = (clsname.upper() + "=" * 30)[:30]
+    candidates = [name30 + "CP", name30 + "CU"]           # class pool / public
+    candidates += [name30 + f"CM{n:03d}" for n in range(1, 31)]  # method includes
+    for prog in candidates:
+        try:
+            got = _read_source(conn, prog)
+            if got:
+                lines.extend(got)
+        except Exception:
+            continue
+    return lines
+
+
+def _read_fox_source(conn, planfunc: str) -> List[str]:
+    """Best-effort read of a planning function's FOX formula lines + exit class.
+
+    Returns FOX source lines (and, if the function is an exit type calling a
+    Z/Y class, that class's source too) so comments can be scanned.
+    """
+    lines: List[str] = []
+    exit_classes = set()
+    try:
+        rows = _read_table(conn, FOX_PARAM_TABLE,
+                           ["OBJNM", "PARNM", "SEQNR", "LOW", "HIGH"],
+                           where=[f"OBJNM = '{planfunc.upper()}'"], rowcount=5000)
+        rows.sort(key=lambda r: (r.get("PARNM", ""), _int(r.get("SEQNR"))))
+        for r in rows:
+            text = (r.get("LOW", "") or "") + (r.get("HIGH", "") or "")
+            if text.strip():
+                lines.append(text)
+            val = (r.get("LOW", "") or "").strip().upper()
+            if val.startswith(("ZCL", "YCL", "ZIF", "YIF")):
+                exit_classes.add(val)
+    except Exception:
+        pass
+    for cls in exit_classes:
+        try:
+            lines.extend(_read_class_source(conn, cls))
+        except Exception:
+            continue
+    return lines
+
+
+def _planseq_functions(conn, seqname: str) -> List[str]:
+    """Return the planning functions referenced by a planning sequence."""
+    try:
+        rows = _read_table(conn, SEQ_STEP_TABLE, ["SEQNM", "OBJNM", "POSIT"],
+                           where=[f"SEQNM = '{seqname.upper()}'"], rowcount=500)
+        return [r.get("OBJNM", "").strip() for r in rows if r.get("OBJNM", "").strip()]
+    except Exception:
+        return []
+
+
+def search_object_comments(objects: List[Dict[str, str]], tokens: List[str],
+                           cfg: Optional[Dict[str, Any]] = None,
+                           max_hits: int = 3) -> Dict[str, List[str]]:
+    """Scan ABAP source / FOX formulas / related classes for the search tokens.
+
+    `objects` is a list of {"name", "category"}. Routing:
+      * ABAP objects        -> RPY_PROGRAM_READ source
+      * Planning Function   -> FOX formula (+ exit class) source
+      * Planning Sequence   -> FOX of each contained planning function
+      * Class / Method      -> class pool + method includes
+    Returns { object_name: [matching comment lines...] }. Live SAP only.
     """
     cfg = cfg or load_config()
     toks = [t.lower() for t in (tokens or []) if t]
-    if not names or not toks or not pyrfc_available() or not is_configured(cfg):
+    if not objects or not toks or not pyrfc_available() or not is_configured(cfg):
         return {}
 
     out: Dict[str, List[str]] = {}
     conn = _connect(cfg)
     try:
-        for name in names:
-            try:
-                lines = _read_source(conn, name)
-            except Exception:
+        for obj in objects:
+            name = (obj.get("name") or "").strip()
+            cat = obj.get("category") or ""
+            if not name:
                 continue
-            hits = []
-            for ln in lines:
-                stripped = ln.strip()
-                if not stripped:
-                    continue
-                is_comment = stripped.startswith("*") or '"' in ln
-                if not is_comment:
-                    continue
-                low = ln.lower()
-                if any(t in low for t in toks):
-                    cleaned = stripped.lstrip("*").split('"', 1)[-1].strip() \
-                        if '"' in ln and not stripped.startswith("*") else stripped.lstrip("* ").strip()
-                    if cleaned:
-                        hits.append(cleaned[:180])
-                if len(hits) >= max_hits:
-                    break
+            lines: List[str] = []
+            try:
+                if cat == "Planning Function" or cat in FOX_CATS and cat != "Planning Sequence":
+                    lines = _read_fox_source(conn, name)
+                elif cat == "Planning Sequence":
+                    for fn in _planseq_functions(conn, name):
+                        lines.extend(_read_fox_source(conn, fn))
+                elif cat in ("Class", "Method"):
+                    base = name.split("=>")[0]
+                    lines = _read_class_source(conn, base)
+                else:  # ABAP program / FM / etc.
+                    lines = _read_source(conn, name)
+            except Exception:
+                lines = []
+            hits = _scan_comments(lines, toks, max_hits)
             if hits:
                 out[name] = hits
     finally:
@@ -406,18 +514,102 @@ def search_code_comments(names: List[str], tokens: List[str],
     return out
 
 
-def _read_source(conn, program: str) -> List[str]:
-    """Read ABAP source lines for a program/include via RPY_PROGRAM_READ."""
-    res = conn.call("RPY_PROGRAM_READ", PROGRAM_NAME=program,
-                    WITH_INCLUDELIST=" ", ONLY_SOURCE="X")
-    src = res.get("SOURCE_EXTENDED") or res.get("SOURCE") or []
-    lines = []
-    for row in src:
-        if isinstance(row, dict):
-            lines.append(row.get("LINE", ""))
-        else:
-            lines.append(str(row))
-    return lines
+def search_code_comments(names: List[str], tokens: List[str],
+                         cfg: Optional[Dict[str, Any]] = None,
+                         max_hits: int = 3) -> Dict[str, List[str]]:
+    """Backward-compatible wrapper: treats every name as an ABAP program."""
+    objs = [{"name": n, "category": "Function Module"} for n in (names or [])]
+    return search_object_comments(objs, tokens, cfg, max_hits)
+
+
+def _int(v):
+    try:
+        return int(str(v).strip() or 0)
+    except Exception:
+        return 0
+
+
+# --------------------------------------------------------------------------- #
+# OData / Gateway service discovery - optional, live SAP only
+# --------------------------------------------------------------------------- #
+# Gateway service-catalog tables (frontend/embedded gateway). Best effort.
+IWFND_REG_TABLE = "/IWFND/I_MED_SRH"     # service registry (hub)
+IWFND_REG_FIELDS = ["TECHNICAL_NAME", "EXTERNAL_NAME", "SERVICE_VERSION", "DESCRIPTION"]
+
+
+def find_odata_services(keyword: str = "", packages: Optional[List[str]] = None,
+                        cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Discover custom OData services in SAP MS1.
+
+    Combines two sources (best effort, either may be empty):
+      * TADIR  - IWSV/IWSG service objects in the PS/PSVC/ZCPM packages
+      * /IWFND/I_MED_SRH - the activated Gateway service registry (keyword search)
+
+    Returns {"services": [{name, type, description, package, source}], "source"}.
+    Requires a configured, reachable SAP session.
+    """
+    cfg = cfg or load_config()
+    if not pyrfc_available() or not is_configured(cfg):
+        return {"services": [], "source": "offline"}
+    packages = packages or cfg.get("packages") or DEFAULT_PACKAGES
+    kw = (keyword or "").strip().upper()
+
+    services = []
+    seen = set()
+    conn = _connect(cfg)
+    try:
+        # 1) repository OData objects in the custom packages
+        for pkg in packages:
+            try:
+                rows = _read_table(conn, "TADIR",
+                                   ["OBJECT", "OBJ_NAME", "DEVCLASS", "AUTHOR"],
+                                   where=[f"DEVCLASS = '{pkg}' AND PGMID = 'R3TR' "
+                                          f"AND ( OBJECT = 'IWSV' OR OBJECT = 'IWSG' "
+                                          f"OR OBJECT = 'IWMO' OR OBJECT = 'IWPR' )"])
+            except Exception:
+                continue
+            for r in rows:
+                nm = r.get("OBJ_NAME", "").strip()
+                if not nm or nm.upper() in seen:
+                    continue
+                if kw and kw not in nm.upper():
+                    continue
+                seen.add(nm.upper())
+                services.append({
+                    "name": nm,
+                    "type": OBJECT_CATEGORY.get(r.get("OBJECT", ""), "OData Service"),
+                    "description": "", "package": r.get("DEVCLASS", pkg),
+                    "author": r.get("AUTHOR", ""), "source": "TADIR",
+                })
+
+        # 2) activated services in the Gateway registry (keyword match)
+        try:
+            where = []
+            if kw:
+                where = [f"TECHNICAL_NAME LIKE '%{kw}%'"]
+            rows = _read_table(conn, IWFND_REG_TABLE, IWFND_REG_FIELDS,
+                               where=where, rowcount=200)
+            for r in rows:
+                nm = (r.get("TECHNICAL_NAME") or r.get("EXTERNAL_NAME") or "").strip()
+                if not nm or nm.upper() in seen:
+                    continue
+                if not _is_custom(nm) and kw and kw not in nm.upper():
+                    continue
+                seen.add(nm.upper())
+                services.append({
+                    "name": nm, "type": "OData Service (registered)",
+                    "description": r.get("DESCRIPTION", ""),
+                    "version": r.get("SERVICE_VERSION", ""),
+                    "package": "", "source": IWFND_REG_TABLE,
+                })
+        except Exception:
+            pass
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return {"services": services, "source": "live" if services else "empty"}
 
 
 # --------------------------------------------------------------------------- #

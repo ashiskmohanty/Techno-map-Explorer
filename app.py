@@ -32,6 +32,8 @@ from flask import Flask, jsonify, request, send_from_directory
 
 import build_data
 import sap_connect
+import sap_http
+import llm
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=HERE, static_url_path="")
@@ -141,7 +143,9 @@ def api_data():
 @app.route("/api/sap/status")
 def api_sap_status():
     """Connection readiness for the UI (no secrets returned)."""
-    return jsonify(sap_connect.status())
+    st = sap_connect.status()
+    st.update(sap_http.status())          # add SDK-free HTTP/OData readiness
+    return jsonify(st)
 
 
 @app.route("/api/sap/config", methods=["POST"])
@@ -149,14 +153,17 @@ def api_sap_config():
     """Persist SAP connection settings entered from the dashboard."""
     payload = request.get_json(silent=True) or {}
     allowed = ("ashost", "sysnr", "client", "user", "passwd", "lang",
-               "saprouter", "mshost", "msserv", "group", "sysid", "packages")
+               "saprouter", "mshost", "msserv", "group", "sysid", "packages",
+               "httpbase", "httpverify")
     cfg = sap_connect.load_config()
     for k in allowed:
         if k in payload and payload[k] not in (None, ""):
             cfg[k] = payload[k]
     # drop password from the stored file if the user cleared it intentionally
     sap_connect.save_config(cfg)
-    return jsonify({"status": "ok", "sap": sap_connect.status()})
+    st = sap_connect.status()
+    st.update(sap_http.status())
+    return jsonify({"status": "ok", "sap": st})
 
 
 @app.route("/api/sap/test", methods=["POST"])
@@ -165,9 +172,15 @@ def api_sap_test():
     payload = request.get_json(silent=True) or {}
     cfg = sap_connect.load_config()
     for k in ("ashost", "sysnr", "client", "user", "passwd", "lang",
-              "saprouter", "mshost", "msserv", "group", "sysid"):
+              "saprouter", "mshost", "msserv", "group", "sysid",
+              "httpbase", "httpverify"):
         if payload.get(k):
             cfg[k] = payload[k]
+    # prefer RFC when available, else fall back to the SDK-free HTTP path
+    if sap_connect.pyrfc_available() and sap_connect.is_configured(cfg):
+        return jsonify(sap_connect.test_connection(cfg))
+    if sap_http.is_configured(cfg):
+        return jsonify(sap_http.test_connection(cfg))
     return jsonify(sap_connect.test_connection(cfg))
 
 
@@ -194,16 +207,20 @@ def api_assistant_code():
     """Scan ABAP/FOX code comments in SAP MS1 for the question terms.
 
     Live SAP only; returns {} when not connected so the assistant still works
-    from object descriptions alone.
+    from object descriptions alone. Accepts either a list of names or a list of
+    {name, category} objects so FOX formulas and classes are read correctly.
     """
     payload = request.get_json(silent=True) or {}
-    names = payload.get("names") or []
+    objects = payload.get("objects")
+    if not objects:
+        objects = [{"name": n, "category": "Function Module"}
+                   for n in (payload.get("names") or [])]
     question = payload.get("question") or ""
     tokens = [t for t in _words(question) if len(t) >= 3]
-    if not names or not tokens:
+    if not objects or not tokens:
         return jsonify({"matches": {}, "source": "none"})
     try:
-        matches = sap_connect.search_code_comments(names, tokens)
+        matches = sap_connect.search_object_comments(objects, tokens)
         return jsonify({"matches": matches, "source": "live" if matches else "empty"})
     except Exception as e:
         app.logger.warning("code comment search failed: %s", e)
@@ -213,6 +230,150 @@ def api_assistant_code():
 def _words(text):
     import re as _re
     return [w.lower() for w in _re.split(r"[^A-Za-z0-9/_]+", text or "") if w]
+
+
+# --------------------------------------------------------------------------- #
+# Assistant training / corrections store
+# --------------------------------------------------------------------------- #
+CORR_FILE = os.path.join(HERE, "corrections.json")
+_STOP = {"the", "a", "an", "is", "are", "to", "of", "for", "and", "or", "in",
+         "on", "at", "which", "what", "where", "who", "how", "do", "does", "did",
+         "can", "i", "me", "my", "we", "you", "it", "that", "this", "from", "as",
+         "show", "tell", "find", "give", "share", "list", "get", "need", "want",
+         "please", "object", "objects", "sap", "use", "used", "using", "with"}
+
+
+def _load_corrections():
+    try:
+        with open(CORR_FILE, "r", encoding="utf-8") as fh:
+            return json.load(fh) or []
+    except Exception:
+        return []
+
+
+def _save_corrections(items):
+    with open(CORR_FILE, "w", encoding="utf-8") as fh:
+        json.dump(items, fh, indent=1, ensure_ascii=False)
+
+
+def _keywords(text):
+    return sorted({w for w in _words(text) if len(w) >= 3 and w not in _STOP})
+
+
+@app.route("/api/assistant/teachings")
+def api_assistant_teachings():
+    return jsonify({"teachings": _load_corrections()})
+
+
+@app.route("/api/assistant/teach", methods=["POST"])
+def api_assistant_teach():
+    """Record a user correction: for <question>, the right object is <object>."""
+    import time as _time
+    payload = request.get_json(silent=True) or {}
+    question = (payload.get("question") or "").strip()
+    obj = (payload.get("object") or "").strip()
+    if not question or not obj:
+        return jsonify({"ok": False, "error": "question and object are required"}), 400
+    items = _load_corrections()
+    entry = {
+        "id": str(int(_time.time() * 1000)),
+        "question": question,
+        "keywords": _keywords(question),
+        "object": obj,
+        "type": (payload.get("type") or "").strip(),
+        "note": (payload.get("note") or "").strip(),
+        "ts": _time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    # replace an existing teaching with identical keywords, else append
+    items = [i for i in items if i.get("keywords") != entry["keywords"]
+             or i.get("object", "").upper() != obj.upper()]
+    items.insert(0, entry)
+    _save_corrections(items[:500])
+    return jsonify({"ok": True, "teaching": entry})
+
+
+@app.route("/api/assistant/teach/<tid>", methods=["DELETE"])
+def api_assistant_unteach(tid):
+    items = [i for i in _load_corrections() if i.get("id") != tid]
+    _save_corrections(items)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/assistant/teach/delete", methods=["POST"])
+def api_assistant_teach_delete():
+    """Delete multiple taught entries by id (or all when 'all' is true)."""
+    payload = request.get_json(silent=True) or {}
+    if payload.get("all"):
+        _save_corrections([])
+        return jsonify({"ok": True, "teachings": []})
+    ids = set(payload.get("ids") or [])
+    items = [i for i in _load_corrections() if i.get("id") not in ids]
+    _save_corrections(items)
+    return jsonify({"ok": True, "teachings": items})
+
+
+@app.route("/api/assistant/llm", methods=["GET"])
+def api_assistant_llm_status():
+    """Report whether an LLM is configured for generic-question understanding."""
+    return jsonify(llm.status())
+
+
+@app.route("/api/assistant/llm", methods=["POST"])
+def api_assistant_llm():
+    """Interpret a free-form message into an action + search keywords via LLM.
+
+    Returns {available:false} when no LLM is configured so the front-end uses
+    its local intent rules instead.
+    """
+    payload = request.get_json(silent=True) or {}
+    message = payload.get("message") or ""
+    if not llm.available():
+        return jsonify({"available": False})
+    result = llm.interpret(message)
+    if result is None:
+        return jsonify({"available": True, "ok": False})
+    result["available"] = True
+    result["ok"] = True
+    return jsonify(result)
+
+
+@app.route("/api/sap/odata", methods=["POST"])
+def api_sap_odata():
+    """Discover custom OData / Gateway services in SAP MS1 (live only)."""
+    payload = request.get_json(silent=True) or {}
+    keyword = payload.get("keyword") or ""
+    try:
+        # 1) RFC repository discovery (IWSV/IWSG in packages) when available
+        if sap_connect.pyrfc_available() and sap_connect.is_configured():
+            res = sap_connect.find_odata_services(keyword)
+            if res.get("services"):
+                return jsonify(res)
+        # 2) SDK-free HTTP catalog (activated Gateway services)
+        if sap_http.is_configured():
+            return jsonify(sap_http.list_odata_services(keyword))
+        return jsonify({"services": [], "source": "offline"})
+    except Exception as e:
+        app.logger.warning("odata discovery failed: %s", e)
+        return jsonify({"services": [], "source": "error", "error": str(e)})
+
+
+@app.route("/api/assistant/sapsearch", methods=["POST"])
+def api_assistant_sapsearch():
+    """Live search of SAP MS1 for the assistant.
+
+    Uses the HTTP/ADT path (no SDK) when configured; also returns matching
+    OData services. Returns empty when no live connection is available.
+    """
+    payload = request.get_json(silent=True) or {}
+    query = payload.get("query") or ""
+    names = payload.get("names") or []
+    try:
+        if sap_http.is_configured():
+            return jsonify(sap_http.live_search(query, names))
+        return jsonify({"objects": [], "services": [], "source": "offline"})
+    except Exception as e:
+        app.logger.warning("sap live search failed: %s", e)
+        return jsonify({"objects": [], "services": [], "source": "error", "error": str(e)})
 
 
 @app.route("/api/refresh", methods=["POST"])

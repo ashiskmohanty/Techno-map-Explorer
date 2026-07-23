@@ -299,7 +299,21 @@ tbody tr:hover{background:var(--panel2)}
   background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04122e;flex:0 0 auto}
 .ahead h3{margin:0;font-size:15px}
 .ahead p{margin:1px 0 0;font-size:11px;color:var(--muted)}
-.ahead .close{margin-left:auto;cursor:pointer;font-size:22px;color:var(--muted)}
+.ahead .close{margin-left:8px;cursor:pointer;font-size:22px;color:var(--muted)}
+.ahead .tmanage{margin-left:auto;cursor:pointer;font-size:16px;opacity:.85}
+.ahead .tmanage:hover{opacity:1}
+.teach-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12.5px}
+.tsel{display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--muted)}
+.teach-list{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto}
+.trow2{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border:1px solid var(--border);
+  border-radius:10px;background:var(--panel)}
+.trow2 input{margin-top:3px}
+.trow2 .tinfo{flex:1;min-width:0}
+.trow2 .tobjn{font-family:"Cascadia Code",Consolas,monospace;font-weight:700;font-size:12.5px;color:#dfe7ff}
+.trow2 .tq{font-size:11.5px;color:var(--muted);margin-top:2px}
+.trow2 .tnote2{font-size:11px;color:#9fb4d8;margin-top:3px}
+.trow2 .tmeta{font-size:10px;color:var(--muted2);margin-top:3px}
+.teach-empty{color:var(--muted);font-size:13px;text-align:center;padding:24px}
 .abody{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--bg2)}
 .msg{max-width:92%;font-size:13px;line-height:1.5;padding:10px 13px;border-radius:12px;white-space:pre-wrap}
 .msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--accent),#3b6fe0);color:#fff;border-bottom-right-radius:4px}
@@ -314,7 +328,24 @@ tbody tr:hover{background:var(--panel2)}
 .arow .rn:hover{color:var(--accent);text-decoration:underline}
 .arow .rc{color:var(--muted);font-size:11px;white-space:nowrap}
 .arow .rp{margin-left:auto;color:var(--muted2);font-size:11px}
+.arow .rp.hi{color:var(--ok);font-weight:700}
+.arow .ck{font-size:10px;color:#04231b;background:var(--ok);padding:1px 6px;border-radius:8px;font-weight:700}
 .cmtline{font-size:11px;color:#9fb4d8;margin:-2px 0 4px 16px;padding-left:8px;border-left:2px solid var(--ok)}
+.acheck{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-top:8px}
+.livesap{margin-top:10px;border-top:1px dashed var(--border);padding-top:8px}
+.livehdr{font-size:11px;font-weight:700;color:var(--ok);margin:2px 0 4px;letter-spacing:.3px}
+.taughtblock{margin-bottom:8px;padding-bottom:6px;border-bottom:1px dashed var(--border)}
+.teach{margin-top:8px}
+.teachlink{font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline dotted}
+.teachlink:hover{color:var(--accent)}
+.teachform{margin-top:7px;display:flex;flex-direction:column;gap:6px}
+.teachform input{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:7px 9px;color:var(--txt);font-size:12px;font-family:inherit}
+.teachform input:focus{outline:none;border-color:var(--accent)}
+.teachform .trow{display:flex;gap:6px}
+.teachform button{border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.teachform .tsave{background:var(--ok);color:#04231b}
+.teachform .tcancel{background:var(--panel2);color:var(--muted)}
 .achips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .achip{font-size:11px;padding:5px 9px;border-radius:9px;border:1px solid var(--border);
   background:var(--panel);color:var(--muted);cursor:pointer}
@@ -523,11 +554,15 @@ tbody tr:hover{background:var(--panel2)}
           <label>Development packages (comma separated)</label>
           <input id="sapPackages" placeholder="ZPS_PROJ_EXEC, Z_PROF_SERVICES, ZCPM"/>
         </div>
+        <div class="field full">
+          <label>MS1 Web base URL — OData / no SDK (optional)</label>
+          <input id="sapHttpBase" placeholder="https://ms1host.corp:44300" autocomplete="off"/>
+        </div>
       </div>
       <p class="muted" style="font-size:11.5px;margin:14px 0 0">
-        Requires the backend (<span class="mono">python app.py</span>) with
-        <span class="mono">pyrfc</span> + the SAP NW RFC SDK installed. The password is
-        stored locally in <span class="mono">sap_config.json</span> on this machine only —
+        Two ways to connect: <b>RFC</b> (App server host + <span class="mono">pyrfc</span> / SAP NW RFC SDK) — full object reads;
+        or <b>HTTPS/OData</b> (MS1 Web base URL, <b>no SDK required</b>) — connection test &amp; OData service discovery.
+        The password is stored locally in <span class="mono">sap_config.json</span> on this machine only —
         prefer the <span class="mono">SAP_PASSWD</span> environment variable for shared setups.
       </p>
     </div>
@@ -548,12 +583,35 @@ tbody tr:hover{background:var(--panel2)}
       <h3>Object Finder</h3>
       <p>Ask what you need — I'll find the ABAP FM / BW object</p>
     </div>
+    <span class="tmanage" id="aManage" title="Manage taught entries">📚</span>
     <span class="close" id="aClose">&times;</span>
   </div>
   <div class="abody" id="aBody"></div>
   <div class="afoot">
     <input id="aInput" placeholder="e.g. which FM deletes cube data? / forecast revenue query"/>
     <button id="aSend">Ask</button>
+  </div>
+</div>
+
+<!-- Taught entries manager -->
+<div class="modal-back" id="teachModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span>📚</span>
+      <h2>Taught entries</h2>
+      <span class="close" id="teachClose">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="teach-toolbar">
+        <label class="tsel"><input type="checkbox" id="teachAll"/> Select all</label>
+        <span class="muted" id="teachCount" style="margin-left:auto"></span>
+      </div>
+      <div id="teachList" class="teach-list"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="teachRefresh">↻ Refresh</button>
+      <button class="btn" id="teachDelete" style="margin-left:auto;border-color:#ef6a7a;color:#ffb3bd">🗑 Delete selected</button>
+    </div>
   </div>
 </div>
 

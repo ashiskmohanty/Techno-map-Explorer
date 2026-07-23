@@ -7,6 +7,7 @@ sap_config.json
 ~$*
 data.json
 data.js
+corrections.json
 
 # --- Python ---
 __pycache__/
