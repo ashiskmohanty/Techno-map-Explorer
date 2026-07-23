@@ -414,6 +414,22 @@ tbody tr:hover{background:var(--panel2)}
 .btn-edit{background:var(--panel2);border:1px solid var(--border);border-radius:7px;
   padding:3px 9px;color:var(--accent);font-size:11.5px;cursor:pointer;white-space:nowrap}
 .btn-edit:hover{border-color:var(--accent);background:var(--panel)}
+.rb-slots{display:flex;flex-direction:column;gap:10px}
+.rb-slot{display:flex;align-items:center;gap:12px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:11px;padding:12px 14px}
+.rb-slot .rb-i{font-size:20px;flex:0 0 auto}
+.rb-slot .rb-meta{flex:1;min-width:0}
+.rb-slot .rb-label{font-size:13px;font-weight:700;color:var(--text)}
+.rb-slot .rb-file{font-size:11.5px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb-slot .rb-cur{font-size:11px;margin-top:2px}
+.rb-slot .rb-cur.ok{color:var(--ok)} .rb-slot .rb-cur.miss{color:#ffb3bd}
+.rb-slot input[type=file]{display:none}
+.rb-pick{background:var(--panel2);border:1px solid var(--border);border-radius:8px;
+  padding:7px 12px;color:var(--accent);font-size:12px;cursor:pointer;flex:0 0 auto}
+.rb-pick:hover{border-color:var(--accent);background:var(--panel)}
+.rb-chosen{font-size:11.5px;color:var(--ok);flex:0 0 auto;max-width:200px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .afoot input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit}
 .afoot input:focus{outline:none;border-color:var(--accent)}
@@ -448,6 +464,7 @@ tbody tr:hover{background:var(--panel2)}
   <div class="tab" data-view="tech">🌳 Technical Objects</div>
   <div class="tab" data-view="custom">📦 Custom Objects <span class="badge" id="bCustom">0</span></div>
   <div class="tab" data-view="admin" id="tabAdmin" style="display:none">🔐 Admin</div>
+  <div class="tab" data-view="rebuild" id="tabRebuild" style="display:none">🛠️ Rebuild</div>
 </nav>
 
 <main>
@@ -579,6 +596,36 @@ tbody tr:hover{background:var(--panel2)}
       <div class="panel"><h3>Top questions asked</h3><div class="adm-list" id="admTopQ"></div></div>
       <div class="panel"><h3>Top contributors <span class="sub">taught corrections</span></h3><div class="adm-list" id="admTopT"></div></div>
       <div class="panel"><h3>Users &amp; repository</h3><div class="adm-list" id="admMisc"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== REBUILD ===================== -->
+  <section class="view" id="view-rebuild">
+    <div class="toolbar">
+      <span class="aud-title">🛠️ Rebuild the platform from source workbooks</span>
+      <span class="muted" id="rbGen" style="margin-left:auto"></span>
+    </div>
+    <div class="panel" style="max-width:920px">
+      <p class="muted" style="margin:0 0 14px;font-size:12.5px">
+        Upload the source Excel files below and click <b>Rebuild now</b>. This regenerates
+        <span class="mono">data.json</span> / <span class="mono">data.js</span>, <b>overwriting</b> the
+        current data — use it to recover from corruption or refresh the baseline. The previous data is
+        backed up automatically. 🔒 Admin only; every rebuild is written to the audit trail.
+      </p>
+      <div id="rbSlots" class="rb-slots"></div>
+      <div class="field" style="margin-top:14px;max-width:520px">
+        <label>Development packages <span class="muted">(comma/space separated — optional)</span></label>
+        <input id="rbPackages" placeholder="ZPS_PROJ_EXEC, Z_PROF_SERVICES, ZCPM" autocomplete="off"/>
+      </div>
+      <div class="conn-status" id="rbStatus" style="margin-top:14px"></div>
+      <div class="modal-foot" style="padding:16px 0 0;border:none">
+        <button class="btn" id="rbReset">Clear selections</button>
+        <button class="btn green" id="rbRun" style="margin-left:auto">🛠️ Rebuild now</button>
+      </div>
+    </div>
+    <div class="panel" style="max-width:920px;margin-top:14px">
+      <h3>Result</h3>
+      <div class="adm-list" id="rbResult"><span class="muted">No rebuild run yet in this session.</span></div>
     </div>
   </section>
 </main>

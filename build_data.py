@@ -157,7 +157,7 @@ def classify_abap(name: str) -> str:
     return "Function Module"
 
 
-def build():
+def build(packages=None):
     print("Reading workbooks...")
     abap_wb = load_workbook(ABAP_FILE)
     bw_wb = load_workbook(BW_FILE)
@@ -371,7 +371,7 @@ def build():
     data = {
         "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "environment": "SAP MS1 / 122",
-        "packages": list(PACKAGES),
+        "packages": list(packages) if packages else list(PACKAGES),
         "source": "offline",
         "processAreas": pa_list,
         "objects": objects,

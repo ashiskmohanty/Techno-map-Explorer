@@ -763,6 +763,112 @@ def api_admin_audit():
     return jsonify({"ok": True, "entries": list(reversed(_load_audit()))})
 
 
+# --------------------------------------------------------------------------- #
+# Rebuild the platform from freshly uploaded source Excel workbooks (admin)
+# --------------------------------------------------------------------------- #
+REBUILD_SLOTS = {
+    "abap": build_data.ABAP_FILE,   # Latest PE Objects - Unused code.xlsx
+    "bw": build_data.BW_FILE,       # SAP PSPE - BWIP Object Analysis.xlsx
+    "bpml": build_data.BPML_FILE,   # Process tiles / BPML mapping workbook
+}
+REBUILD_LABELS = {
+    "abap": "ABAP objects + Process-area mapping",
+    "bw": "BW-IP objects + Process-area mapping",
+    "bpml": "Process tiles / L1 process mapping",
+}
+
+
+@app.route("/api/rebuild/status")
+def api_rebuild_status():
+    """Admin-only: which source workbooks exist and their timestamps."""
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    import time as _t
+    files = {}
+    for slot, fname in REBUILD_SLOTS.items():
+        p = os.path.join(HERE, fname)
+        ex = os.path.exists(p)
+        files[slot] = {
+            "slot": slot,
+            "label": REBUILD_LABELS.get(slot, slot),
+            "name": fname,
+            "exists": ex,
+            "modified": (_t.strftime("%Y-%m-%d %H:%M:%S", _t.localtime(os.path.getmtime(p)))
+                         if ex else None),
+            "bytes": os.path.getsize(p) if ex else 0,
+        }
+    return jsonify({"ok": True, "files": files, "packages": list(build_data.PACKAGES)})
+
+
+@app.route("/api/rebuild", methods=["POST"])
+def api_rebuild():
+    """Admin-only: save uploaded workbook(s), then rebuild data.json/data.js,
+    overwriting the existing generated data. Backs up what it replaces."""
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    import re as _re, shutil as _sh, time as _t
+
+    saved = {}
+    for slot, fname in REBUILD_SLOTS.items():
+        f = request.files.get(slot)
+        if not f or not f.filename:
+            continue
+        ext = os.path.splitext(f.filename)[1].lower()
+        if ext not in (".xlsx", ".xls"):
+            return jsonify({"ok": False,
+                            "error": f"{slot}: only .xlsx / .xls files are allowed."}), 400
+        dest = os.path.join(HERE, fname)          # canonical name (no traversal)
+        if os.path.exists(dest):
+            try:
+                _sh.copy2(dest, dest + ".bak")
+            except Exception:
+                pass
+        f.save(dest)
+        saved[slot] = {"saved_as": fname, "uploaded": f.filename,
+                       "bytes": os.path.getsize(dest)}
+
+    packages = None
+    pk = (request.form.get("packages") or "").strip()
+    if pk:
+        packages = [p.strip() for p in _re.split(r"[,\s]+", pk) if p.strip()]
+
+    if not saved and not packages:
+        return jsonify({"ok": False,
+                        "error": "Upload at least one Excel file, or provide packages."}), 400
+
+    dj = os.path.join(HERE, "data.json")
+    if os.path.exists(dj):
+        try:
+            _sh.copy2(dj, dj + "." + _t.strftime("%Y%m%d_%H%M%S") + ".bak")
+        except Exception:
+            pass
+
+    try:
+        build_data.build(packages=packages)
+    except Exception as e:
+        app.logger.exception("rebuild failed")
+        return jsonify({"ok": False,
+                        "error": f"Rebuild failed: {type(e).__name__}: {e}"}), 500
+
+    data = load_or_build()                        # overlays manual + admin edits
+    by = (request.form.get("by") or request.headers.get("X-Admin-User") or "admin")
+    _audit("rebuild", by=by,
+           files={k: v["uploaded"] for k, v in saved.items()},
+           packages=packages, objects=len(data.get("objects", [])))
+    _track("rebuild", user=by)
+    return jsonify({
+        "ok": True,
+        "saved": saved,
+        "summary": {
+            "objects": len(data.get("objects", [])),
+            "processAreas": len(data.get("processAreas", [])),
+            "generated": data.get("generated"),
+            "packages": data.get("packages"),
+        },
+        "data": data,
+    })
+
+
 @app.route("/api/admin/status")
 def api_admin_status():
     """Whether the caller is the admin (holds the key). No secrets leaked."""

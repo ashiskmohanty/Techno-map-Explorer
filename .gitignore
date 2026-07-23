@@ -15,6 +15,7 @@ manual_objects.json
 object_edits.json
 audit_log.jsonl
 exports/
+*.bak
 
 # --- Python ---
 __pycache__/

@@ -268,6 +268,113 @@ async function saveEditForm() {
   }
 }
 
+/* ===================== REBUILD (admin: upload source workbooks) ===================== */
+async function initRebuild() {
+  const wrap = document.getElementById('rbSlots');
+  if (!wrap) return;
+  let status = null;
+  try {
+    const r = await fetch('/api/rebuild/status?key=' + encodeURIComponent(State.adminKey || ''));
+    if (r.ok) status = await r.json();
+  } catch (e) { /* ignore */ }
+  const files = (status && status.files) || {};
+  const order = ['abap', 'bw', 'bpml'];
+  const icons = { abap: '🧱', bw: '📊', bpml: '🗂️' };
+  wrap.innerHTML = order.map(slot => {
+    const f = files[slot] || {};
+    const cur = f.exists
+      ? `<div class="rb-cur ok">current: ${esc(f.name)} · ${esc(f.modified || '')} · ${fmtBytes(f.bytes)}</div>`
+      : `<div class="rb-cur miss">not present yet</div>`;
+    return `<div class="rb-slot" data-slot="${slot}">
+      <span class="rb-i">${icons[slot] || '📄'}</span>
+      <div class="rb-meta">
+        <div class="rb-label">${esc(f.label || slot)}</div>
+        <div class="rb-file">→ ${esc(f.name || '')}</div>
+        ${cur}
+      </div>
+      <span class="rb-chosen" data-chosen></span>
+      <label class="rb-pick">Choose file<input type="file" accept=".xlsx,.xls"/></label>
+    </div>`;
+  }).join('');
+  if (status && status.packages) document.getElementById('rbPackages').placeholder = status.packages.join(', ');
+  State.rebuildFiles = {};
+  wrap.querySelectorAll('.rb-slot').forEach(row => {
+    const slot = row.dataset.slot;
+    const inp = row.querySelector('input[type=file]');
+    inp.addEventListener('change', () => {
+      const f = inp.files[0];
+      State.rebuildFiles[slot] = f || null;
+      row.querySelector('[data-chosen]').textContent = f ? '✓ ' + f.name : '';
+    });
+  });
+  document.getElementById('rbReset').onclick = () => { setRbStatus('', ''); initRebuild(); };
+  document.getElementById('rbRun').onclick = runRebuild;
+  const gen = document.getElementById('rbGen');
+  if (gen && State.data) gen.textContent = 'current data generated: ' + (State.data.generated || '—');
+}
+
+async function runRebuild() {
+  const files = State.rebuildFiles || {};
+  const pk = document.getElementById('rbPackages').value.trim();
+  const chosen = Object.keys(files).filter(k => files[k]);
+  if (!chosen.length && !pk) { setRbStatus('Choose at least one Excel file (or set packages).', 'err'); return; }
+  const fd = new FormData();
+  chosen.forEach(k => fd.append(k, files[k]));
+  if (pk) fd.append('packages', pk);
+  fd.append('by', State.adminUser || 'admin');
+  const btn = document.getElementById('rbRun');
+  const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Rebuilding…';
+  setRbStatus('Uploading workbook(s) and rebuilding…', '');
+  try {
+    const r = await fetch('/api/rebuild?key=' + encodeURIComponent(State.adminKey || ''), {
+      method: 'POST', headers: { 'X-Admin-Key': State.adminKey || '' }, body: fd,
+    });
+    if (r.status === 403) { setRbStatus('Admin key required or invalid.', 'err'); return; }
+    const res = await r.json().catch(() => ({}));
+    if (r.ok && res.ok && res.data) {
+      applyData(res.data);
+      initProcess(); initTech(); buildCustHeader(); renderCustTable(); renderCustPackages();
+      setRbStatus('✅ Rebuild complete — the platform data has been overwritten.', 'ok');
+      renderRbResult(res);
+      toast(`Platform rebuilt · ${res.summary.objects} objects`);
+      initRebuild();
+    } else {
+      setRbStatus(res.error || 'Rebuild failed.', 'err');
+    }
+  } catch (e) {
+    setRbStatus('Could not reach the backend.', 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
+  }
+}
+
+function renderRbResult(res) {
+  const el = document.getElementById('rbResult'); if (!el) return;
+  const s = res.summary || {};
+  const saved = res.saved || {};
+  const rows = [
+    `<div class="li"><span class="lk">Generated</span><b>${esc(s.generated || '—')}</b></div>`,
+    `<div class="li"><span class="lk">Objects</span><b>${s.objects || 0}</b></div>`,
+    `<div class="li"><span class="lk">Process areas</span><b>${s.processAreas || 0}</b></div>`,
+    `<div class="li"><span class="lk">Packages</span><b>${esc((s.packages || []).join(', '))}</b></div>`,
+  ];
+  Object.entries(saved).forEach(([k, v]) =>
+    rows.push(`<div class="li"><span class="lk">Uploaded · ${esc(k)}</span><b>${esc(v.uploaded)}</b></div>`));
+  el.innerHTML = rows.join('');
+}
+
+function setRbStatus(msg, kind) {
+  const el = document.getElementById('rbStatus'); if (!el) return;
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = 'block'; el.textContent = msg;
+  el.style.color = kind === 'err' ? '#ffb3bd' : (kind === 'ok' ? '#8fe3a8' : 'var(--muted)');
+}
+
+function fmtBytes(n) {
+  n = n || 0;
+  return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : (n / 1024).toFixed(0) + ' KB';
+}
+
 /* footfall: count clicks and flush periodically + on page hide */
 function initFootfall() {
   let clicks = 0;
@@ -2096,8 +2203,11 @@ function initAdmin() {
     State.isAdmin = true;
     const tab = document.getElementById('tabAdmin');
     if (tab) tab.style.display = '';
+    const rtab = document.getElementById('tabRebuild');
+    if (rtab) rtab.style.display = '';
     buildCustHeader();          // reveal the admin-only Edit column
     renderCustTable();
+    initRebuild();
     renderAdminKpisLists();
     const rb = document.getElementById('admRefresh');
     if (rb) rb.onclick = async () => { await loadAdminMetrics(); renderAdminKpisLists(); renderAdminCharts(); toast('Admin metrics refreshed'); };
