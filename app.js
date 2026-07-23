@@ -945,8 +945,6 @@ const CUST_COLS = [
   { key: 'process', label: 'Process Area' },
   { key: 'primaryProcess', label: 'Primary Process' },
   { key: 'package', label: 'Package' },
-  { key: 'author', label: 'Author' },
-  { key: 'created', label: 'Created / Last Used' },
   { key: 'validity', label: 'Validity' },
 ];
 
@@ -1004,7 +1002,7 @@ function buildCustHeader() {
 }
 
 /* columns filtered by a multi-select of their unique values */
-const MULTI_COLS = new Set(['category', 'domain', 'process', 'primaryProcess', 'package', 'author', 'validity']);
+const MULTI_COLS = new Set(['category', 'domain', 'process', 'primaryProcess', 'package', 'validity']);
 
 /* unique values (with counts) for a column, across the custom objects */
 function custUnique(col) {
@@ -1158,8 +1156,6 @@ function renderCustTable() {
     <td>${esc(o.process)}</td>
     <td>${esc(o.primaryProcess || getL1(o.process))}</td>
     <td class="mono muted">${esc(o.package)}</td>
-    <td>${esc(o.author)}</td>
-    <td class="muted">${esc(o.created)}</td>
     <td>${valBadge(o.validity) || '<span class="muted">—</span>'}</td>
     ${State.isAdmin ? `<td><button class="btn-edit" data-name="${esc(o.name)}">✏️ Edit</button></td>` : ''}
   </tr>`).join('');
@@ -1173,7 +1169,7 @@ function exportExcel() {
   const aoa = [CUST_COLS.map(c => c.label)];
   rows.forEach(o => aoa.push(CUST_COLS.map(c => o[c.key] ?? '')));
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = CUST_COLS.map((c, i) => ({ wch: [34, 44, 18, 8, 20, 18, 18, 14, 18, 10][i] || 16 }));
+  ws['!cols'] = CUST_COLS.map((c, i) => ({ wch: [34, 44, 18, 8, 20, 18, 18, 10][i] || 16 }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Custom Objects');
   const stamp = new Date().toISOString().slice(0, 10);
