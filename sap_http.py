@@ -202,6 +202,70 @@ def adt_search(query: str, cfg: Optional[Dict[str, Any]] = None,
     return out
 
 
+def fetch_all(cfg: Optional[Dict[str, Any]] = None,
+              max_per_query: int = 400,
+              prefixes: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """Enumerate all custom (Z*/Y*) ABAP repository objects in the configured
+    PS packages via ADT quickSearch (no SDK).
+
+    Returns normalised object dicts ready for the dashboard. ADT does not expose
+    BW-IP query / planning metadata over the repository search, so this returns
+    the live *ABAP* footprint; the caller keeps BW objects from the last build.
+
+    `prefixes` = extra name patterns (e.g. known PS object prefixes) so the
+    package-scoped set is covered even on large systems where a plain Z*/Y*
+    quick-search would be truncated.
+    """
+    cfg = _cfg(cfg)
+    if not is_configured(cfg):
+        return []
+    allowed = {p.strip().upper() for p in
+               (cfg.get("packages") or ["ZPS_PROJ_EXEC", "Z_PROF_SERVICES", "ZCPM"])}
+    # name-pattern queries: the two namespaces plus any explicit prefixes
+    queries = ["Z*", "Y*"]
+    for pref in list(prefixes or []) + list(cfg.get("objprefixes") or []):
+        pref = str(pref).strip()
+        if not pref:
+            continue
+        pat = pref if pref.endswith("*") else pref + "*"
+        if pat not in queries:
+            queries.append(pat)
+
+    keep: Dict[str, Dict[str, Any]] = {}
+    for q in queries:
+        try:
+            for o in adt_search(q, cfg, max_results=max_per_query):
+                key = o.get("name", "").upper()
+                if not key or key in keep:
+                    continue
+                # keep only the custom namespace
+                if not key.startswith(("Z", "Y")):
+                    continue
+                pkg = (o.get("package") or "").strip().upper()
+                # restrict to the configured PS packages: only objects that are
+                # *confirmed* to live in one of them (drop blank / unrelated pkgs)
+                if allowed and pkg not in allowed:
+                    continue
+                cat = o.get("type") or "ABAP Object"
+                if "/" in cat:                       # raw ADT type code -> clean
+                    cat = "ABAP Object"
+                keep[key] = {
+                    "name": o["name"],
+                    "domain": "ABAP",
+                    "category": cat,
+                    "package": o.get("package", ""),
+                    "author": "",
+                    "created": "",
+                    "description": o.get("description", ""),
+                    "validity": "",
+                    "technical": o.get("adt_type", ""),
+                    "source": "SAP ADT (live)",
+                }
+        except Exception:
+            continue
+    return sorted(keep.values(), key=lambda o: o["name"])
+
+
 # --------------------------------------------------------------------------- #
 # ADT where-used (usageReferences) over HTTP - no SDK
 # --------------------------------------------------------------------------- #

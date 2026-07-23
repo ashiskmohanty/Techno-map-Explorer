@@ -11,6 +11,8 @@ corrections.json
 feedback.json
 usage.jsonl
 admin_config.json
+manual_objects.json
+exports/
 
 # --- Python ---
 __pycache__/

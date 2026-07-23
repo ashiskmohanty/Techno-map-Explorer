@@ -256,6 +256,9 @@ tbody tr:hover{background:var(--panel2)}
 .field input{background:var(--panel);border:1px solid var(--border);border-radius:9px;
   padding:9px 11px;color:var(--text);font-size:13px;font-family:inherit}
 .field input:focus{outline:none;border-color:var(--accent)}
+.field select{background:var(--panel);border:1px solid var(--border);border-radius:9px;
+  padding:9px 11px;color:var(--text);font-size:13px;font-family:inherit;cursor:pointer}
+.field select:focus{outline:none;border-color:var(--accent)}
 .modal-foot{display:flex;align-items:center;gap:10px;padding:16px 22px;
   border-top:1px solid var(--border)}
 .conn-status{font-size:12.5px;padding:9px 12px;border-radius:10px;margin-bottom:14px;
@@ -379,6 +382,12 @@ tbody tr:hover{background:var(--panel2)}
   border-radius:50%;background:var(--muted);transition:.18s}
 .aswitch input:checked + .atrack{background:var(--ok);border-color:var(--ok)}
 .aswitch input:checked + .atrack::before{transform:translateX(18px);background:#04231b}
+.custmeta{padding-top:0;gap:8px;align-items:center;flex-wrap:wrap}
+.pkgchips{display:inline-flex;gap:6px;flex-wrap:wrap}
+.pkgchip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11.5px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--text)}
+.pkgchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
 .afoot input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit}
 .afoot input:focus{outline:none;border-color:var(--accent)}
@@ -497,7 +506,17 @@ tbody tr:hover{background:var(--panel2)}
         <input id="custSearch" placeholder="Global search across all columns… (wildcard *)"/></div>
       <button class="btn green" id="btnExport">⬇ Export to Excel</button>
       <button class="btn primary" id="btnRefresh">⟳ Refresh from SAP MS1</button>
-      <span class="muted" id="custCount" style="margin-left:auto"></span>
+      <span class="muted" id="custSync" style="margin-left:auto"></span>
+      <span class="muted" id="custCount"></span>
+    </div>
+    <div class="toolbar custmeta">
+      <span class="muted">📦 SAP fetch scope:</span>
+      <span id="custPackages" class="pkgchips"></span>
+      <label class="aswitch" title="Show only objects stored in the local files (hide objects fetched live from SAP MS1)" style="margin-left:auto">
+        <input type="checkbox" id="localOnlyToggle"/><span class="atrack"></span>
+      </label>
+      <span class="aopts-label">🗂️ Local files only</span>
+      <span class="muted" id="localOnlyState">off</span>
     </div>
     <div class="tablewrap">
       <table id="custTable">
@@ -681,6 +700,62 @@ tbody tr:hover{background:var(--panel2)}
     <div class="modal-foot">
       <button class="btn" id="teachRefresh">↻ Refresh</button>
       <button class="btn" id="teachDelete" style="margin-left:auto;border-color:#ef6a7a;color:#ffb3bd">🗑 Delete selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add object to local repository -->
+<div class="modal-back" id="addModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span>➕</span>
+      <h2>Add object to local repository</h2>
+      <span class="close" id="addClose">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="conn-status" id="addStatus"></div>
+      <div class="form-grid">
+        <div class="field full">
+          <label>Object name (Z* / Y*)</label>
+          <input id="addName" placeholder="e.g. ZPS_CPM_VALUATION" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>Domain</label>
+          <select id="addDomain"><option value="ABAP">ABAP</option><option value="BW">BW-IP</option></select>
+        </div>
+        <div class="field">
+          <label>Object category</label>
+          <select id="addCategory"></select>
+        </div>
+        <div class="field">
+          <label>Process Area (L1 tile)</label>
+          <select id="addL1"></select>
+        </div>
+        <div class="field">
+          <label>Sub-Process area (tile)</label>
+          <input list="addSubList" id="addProcess" placeholder="pick existing or type new" autocomplete="off"/>
+          <datalist id="addSubList"></datalist>
+        </div>
+        <div class="field full">
+          <label>Description</label>
+          <input id="addDesc" placeholder="optional" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>Author</label>
+          <input id="addAuthor" placeholder="optional" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>Development package</label>
+          <input id="addPackage" placeholder="optional" autocomplete="off"/>
+        </div>
+      </div>
+      <p class="muted" style="font-size:11.5px;margin:14px 0 0">
+        Saved to the local repository (<span class="mono">manual_objects.json</span>) and shown under the chosen tile immediately.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="addCancel">Cancel</button>
+      <button class="btn green" id="addSave" style="margin-left:auto">💾 Save to local files</button>
     </div>
   </div>
 </div>

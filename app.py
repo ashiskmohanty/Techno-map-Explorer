@@ -54,7 +54,50 @@ def load_or_build():
     if not os.path.exists(path):
         build_data.build()
     with open(path, "r", encoding="utf-8") as fh:
-        return json.load(fh)
+        data = json.load(fh)
+    return _merge_manual(data)
+
+
+# --------------------------------------------------------------------------- #
+# Manually-added objects (persisted, merged into the served repository)
+# --------------------------------------------------------------------------- #
+MANUAL_FILE = os.environ.get("PSPE_MANUAL_FILE") or os.path.join(HERE, "manual_objects.json")
+
+
+def _load_manual():
+    try:
+        with open(MANUAL_FILE, "r", encoding="utf-8") as fh:
+            return json.load(fh) or []
+    except Exception:
+        return []
+
+
+def _save_manual(items):
+    tmp = f"{MANUAL_FILE}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(items, fh, indent=1, ensure_ascii=False)
+    os.replace(tmp, MANUAL_FILE)
+
+
+def _merge_manual(data):
+    """Fold manually-added objects into a freshly loaded data dict."""
+    manual = _load_manual()
+    if not manual:
+        return data
+    have = {o.get("name", "").upper() for o in data.get("objects", [])}
+    added = False
+    for m in manual:
+        if m.get("name", "").upper() in have:
+            continue
+        data.setdefault("objects", []).append({**m, "custom": True})
+        have.add(m.get("name", "").upper())
+        added = True
+    if added:
+        data["processAreas"] = _recount_process_areas(data["objects"])
+        data["stats"] = build_data.build_stats(data["objects"], {})
+        data["manualCount"] = len(manual)
+    return data
+
 
 
 # --------------------------------------------------------------------------- #
@@ -538,6 +581,59 @@ def api_track():
     return jsonify({"ok": True})
 
 
+@app.route("/api/objects/manual")
+def api_objects_manual_list():
+    return jsonify({"objects": _load_manual()})
+
+
+@app.route("/api/objects/add", methods=["POST"])
+def api_objects_add():
+    """Add a custom object to the local repository so it shows under a tile."""
+    import time as _time
+    p = request.get_json(silent=True) or {}
+    name = (p.get("name") or "").strip()
+    process = (p.get("process") or "").strip()
+    domain = (p.get("domain") or "").strip().upper()
+    category = (p.get("category") or "").strip()
+    if not name or not process:
+        return jsonify({"ok": False, "error": "name and process (sub-area) are required"}), 400
+    if domain not in ("ABAP", "BW"):
+        domain = "BW" if category in (
+            "BEx Query", "Planning Sequence", "Planning Function", "Filter",
+            "InfoProvider", "Aggregation Level", "InfoObject") else "ABAP"
+    entry = {
+        "name": name,
+        "domain": domain,
+        "category": category or ("Function Module" if domain == "ABAP" else "BEx Query"),
+        "process": process,
+        "l1": (p.get("l1") or "").strip(),
+        "package": (p.get("package") or "").strip(),
+        "author": (p.get("author") or "").strip(),
+        "created": _time.strftime("%Y-%m-%d"),
+        "description": (p.get("description") or "").strip(),
+        "validity": "",
+        "technical": "",
+        "source": "manual",
+        "custom": True,
+    }
+    with _FileLock(MANUAL_FILE):
+        items = _load_manual()
+        if any(i.get("name", "").upper() == name.upper() for i in items):
+            return jsonify({"ok": False, "error": f"{name} is already in the local repository."}), 409
+        items.insert(0, entry)
+        _save_manual(items)
+    _track("object_add", proc=process, user=(p.get("author") or ""))
+    return jsonify({"ok": True, "object": entry})
+
+
+@app.route("/api/objects/manual/<path:name>", methods=["DELETE"])
+def api_objects_delete(name):
+    with _FileLock(MANUAL_FILE):
+        items = [i for i in _load_manual() if i.get("name", "").upper() != name.upper()]
+        _save_manual(items)
+    return jsonify({"ok": True})
+
+
 @app.route("/api/admin/status")
 def api_admin_status():
     """Whether the caller is the admin (holds the key). No secrets leaked."""
@@ -681,11 +777,15 @@ def api_assistant_sapsearch():
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
     _track("refresh")
-    # 1. try live SAP MS1
+    # 1. try live SAP MS1 over RFC (needs pyrfc + SAP NW RFC SDK)
     note = None
     try:
         data, reason = sap_refresh()
         if data is not None:
+            try:
+                _persist_live(data, "RFC")
+            except Exception as e:
+                app.logger.warning("live snapshot save failed: %s", e)
             return jsonify({"status": "ok", "source": reason, "data": data})
         note = {
             "pyrfc not installed": "pyrfc/SAP RFC SDK not installed on the server.",
@@ -695,7 +795,18 @@ def api_refresh():
         app.logger.warning("SAP refresh failed: %s", e)
         note = f"Live SAP read failed: {type(e).__name__}: {e}"
 
-    # 2. rebuild from Excel exports
+    # 2. try live SAP MS1 over HTTP / ADT (no SDK required, works on any Python)
+    try:
+        data, hmsg = _refresh_via_http()
+        if data is not None:
+            return jsonify({"status": "ok", "source": "live",
+                            "message": hmsg, "data": data})
+        note = hmsg or note
+    except Exception as e:
+        app.logger.warning("HTTP refresh failed: %s", e)
+        note = f"Live HTTP read failed: {type(e).__name__}: {e}"
+
+    # 3. rebuild from Excel exports
     data = build_data.build()
     return jsonify({
         "status": "ok",
@@ -704,6 +815,158 @@ def api_refresh():
                     " Rebuilt from the Excel exports.",
         "data": data,
     })
+
+
+# --------------------------------------------------------------------------- #
+# Live refresh over HTTP/ADT + persisted Excel snapshot
+# --------------------------------------------------------------------------- #
+LIVE_XLSX = os.environ.get("PSPE_LIVE_XLSX") or os.path.join(HERE, "sap_live_objects.xlsx")
+EXPORTS_DIR = os.path.join(HERE, "exports")
+
+
+def _refresh_via_http():
+    """Fetch all custom objects live over ADT (no SDK), merge with the existing
+    BW / process-area assignments, persist a timestamped Excel snapshot + the
+    served data.json, and return (data, message). Returns (None, reason) when a
+    live read is not possible so the caller can fall back to Excel."""
+    if not sap_http.is_configured():
+        return None, "SAP MS1 HTTP endpoint is not configured."
+    base = load_or_build()
+    # known ABAP name prefixes -> targeted, package-scoped live discovery
+    prefixes = sorted({o["name"][:5].upper()
+                       for o in base["objects"]
+                       if o.get("domain") == "ABAP" and len(o.get("name", "")) >= 5})
+    live = sap_http.fetch_all(prefixes=prefixes)
+    if not live:
+        return None, "SAP MS1 returned no live objects (ADT search empty)."
+
+    by_name = {o["name"].upper(): o for o in base["objects"]}
+    added = updated = 0
+    for lv in live:
+        key = lv["name"].upper()
+        cur = by_name.get(key)
+        if cur:
+            # overlay authoritative live metadata onto the existing entry, but
+            # keep it flagged as a local-file object (it lives in data.json).
+            cur["package"] = lv.get("package") or cur.get("package", "")
+            cur["description"] = cur.get("description") or lv.get("description", "")
+            if lv.get("category") and cur.get("domain") == "ABAP":
+                cur["category"] = lv["category"]
+            cur["live"] = True
+            updated += 1
+        else:
+            base["objects"].append({**lv, "process": "Unmapped (SAP MS1)", "custom": True})
+            by_name[key] = base["objects"][-1]
+            added += 1
+
+    ts = __import__("time").strftime("%Y-%m-%d %H:%M:%S")
+    base["processAreas"] = _recount_process_areas(base["objects"])
+    base["stats"] = build_data.build_stats(base["objects"], {})
+    base["source"] = "live"
+    base["generated"] = ts
+    base["liveRefresh"] = {
+        "at": ts, "abap_live": len(live), "added": added, "updated": updated,
+    }
+
+    xlsx = _persist_live(base, "ADT")
+    base["liveRefresh"]["excel"] = os.path.basename(xlsx) if xlsx else ""
+    msg = (f"Live SAP MS1: {len(live)} ABAP objects fetched "
+           f"({added} new, {updated} updated). "
+           f"Snapshot saved to {os.path.basename(xlsx) if xlsx else 'Excel'}.")
+    return base, msg
+
+
+def _persist_live(data, how):
+    """Persist a refreshed dataset: write data.json / data.js (so the dashboard
+    keeps using it later) and a timestamped Excel workbook of all objects."""
+    # served JSON + JS fallback
+    with open(os.path.join(HERE, "data.json"), "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=1, ensure_ascii=False)
+    with open(os.path.join(HERE, "data.js"), "w", encoding="utf-8") as fh:
+        fh.write("window.__PSPE_DATA__ = ")
+        json.dump(data, fh, ensure_ascii=False)
+        fh.write(";\n")
+    # Excel snapshot with timestamp
+    return _export_live_xlsx(data, how)
+
+
+def _export_live_xlsx(data, how):
+    """Write all object details to a local Excel workbook (stable name + a
+    timestamped copy under exports/). Returns the stable file path."""
+    try:
+        from openpyxl import Workbook
+    except Exception:
+        return ""
+    import time as _t
+    ts = _t.strftime("%Y-%m-%d %H:%M:%S")
+    stamp = _t.strftime("%Y%m%d_%H%M%S")
+    objects = data.get("objects", [])
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Objects"
+    cols = ["Name", "Domain", "Category", "Process Area", "L1", "Package",
+            "Author", "Created", "Description", "Validity", "Technical",
+            "Source", "Snapshot"]
+    ws.append(cols)
+    for o in objects:
+        ws.append([
+            o.get("name", ""), o.get("domain", ""), o.get("category", ""),
+            o.get("process", ""), o.get("l1", ""), o.get("package", ""),
+            o.get("author", ""), o.get("created", ""), o.get("description", ""),
+            o.get("validity", ""), o.get("technical", ""), o.get("source", ""),
+            ts,
+        ])
+    meta = wb.create_sheet("Snapshot")
+    lr = data.get("liveRefresh", {}) or {}
+    meta.append(["Generated", ts])
+    meta.append(["Method", how])
+    meta.append(["Environment", data.get("environment", "SAP MS1 / 122")])
+    meta.append(["Total objects", len(objects)])
+    meta.append(["ABAP objects", sum(1 for o in objects if o.get("domain") == "ABAP")])
+    meta.append(["BW objects", sum(1 for o in objects if o.get("domain") == "BW")])
+    meta.append(["Live ABAP fetched", lr.get("abap_live", "")])
+    meta.append(["New this refresh", lr.get("added", "")])
+    meta.append(["Updated this refresh", lr.get("updated", "")])
+
+    wb.save(LIVE_XLSX)
+    try:
+        os.makedirs(EXPORTS_DIR, exist_ok=True)
+        wb.save(os.path.join(EXPORTS_DIR, f"sap_objects_{stamp}.xlsx"))
+    except Exception:
+        pass
+    return LIVE_XLSX
+
+
+@app.route("/api/refresh/status")
+def api_refresh_status():
+    """Last live-refresh metadata + Excel snapshot info for the dashboard."""
+    info = {"excel": None, "generated": None, "liveRefresh": None}
+    try:
+        with open(os.path.join(HERE, "data.json"), "r", encoding="utf-8") as fh:
+            d = json.load(fh)
+        info["generated"] = d.get("generated")
+        info["liveRefresh"] = d.get("liveRefresh")
+    except Exception:
+        pass
+    if os.path.exists(LIVE_XLSX):
+        import time as _t
+        info["excel"] = {
+            "name": os.path.basename(LIVE_XLSX),
+            "modified": _t.strftime("%Y-%m-%d %H:%M:%S",
+                                    _t.localtime(os.path.getmtime(LIVE_XLSX))),
+            "bytes": os.path.getsize(LIVE_XLSX),
+        }
+    return jsonify(info)
+
+
+@app.route("/api/refresh/export")
+def api_refresh_export():
+    """Download the most recent live Excel snapshot."""
+    if not os.path.exists(LIVE_XLSX):
+        return jsonify({"ok": False, "error": "No live snapshot yet."}), 404
+    return send_from_directory(HERE, os.path.basename(LIVE_XLSX), as_attachment=True)
+
 
 
 if __name__ == "__main__":

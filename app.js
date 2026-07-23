@@ -15,10 +15,12 @@ const State = {
   drawerCy: null,
   custFilters: {},   // column -> wildcard text
   custSearch: '',
+  custLocalOnly: false, // Custom Objects: show only local-file objects (hide live SAP)
   l1Filter: null,    // selected Level-1 process area (drill-down)
   sapConnected: false, // green header dot when a live SAP link exists
   teachings: [],     // user corrections that train the assistant
   feedback: [],      // 👎/✕ feedback: demote or hide results for similar questions
+  l1Override: {},    // sub-process (L2) -> Process Area (L1) for manually-added objects
 };
 
 /* single source of truth for the header connection dot */
@@ -73,6 +75,98 @@ async function boot() {
   initAssistant();
   initAdmin();
   initFootfall();
+  initAddForm();
+}
+
+/* ===================== ADD OBJECT FORM ===================== */
+const ABAP_ADD_CATS = ['Function Module', 'Class', 'Interface', 'Program', 'Table Maintenance', 'Method', 'Structure', 'Enhancement'];
+const BW_ADD_CATS = ['BEx Query', 'Planning Sequence', 'Planning Function', 'Filter', 'InfoProvider', 'Aggregation Level', 'InfoObject', 'Transformation'];
+
+function setAddStatus(msg, kind) {
+  const el = document.getElementById('addStatus'); if (!el) return;
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.color = kind === 'err' ? '#ffb3bd' : (kind === 'ok' ? '#8fe3a8' : 'var(--muted)');
+}
+
+function initAddForm() {
+  const modal = document.getElementById('addModal'); if (!modal) return;
+  const domain = document.getElementById('addDomain');
+  const cat = document.getElementById('addCategory');
+  const l1 = document.getElementById('addL1');
+  const subList = document.getElementById('addSubList');
+  const fillCats = () => {
+    const arr = domain.value === 'BW' ? BW_ADD_CATS : ABAP_ADD_CATS;
+    cat.innerHTML = arr.map(c => `<option>${esc(c)}</option>`).join('');
+  };
+  const fillSubs = () => {
+    const subs = [...new Set((State.processAreas || []).filter(p => getL1(p.name) === l1.value).map(p => p.name))].sort();
+    subList.innerHTML = subs.map(s => `<option value="${esc(s)}">`).join('');
+  };
+  domain.addEventListener('change', fillCats);
+  l1.addEventListener('change', fillSubs);
+  document.getElementById('addClose').addEventListener('click', () => modal.classList.remove('open'));
+  document.getElementById('addCancel').addEventListener('click', () => modal.classList.remove('open'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+  document.getElementById('addSave').addEventListener('click', saveAddForm);
+}
+
+function openAddForm() {
+  const modal = document.getElementById('addModal'); if (!modal) return;
+  const domain = document.getElementById('addDomain');
+  const cat = document.getElementById('addCategory');
+  const l1 = document.getElementById('addL1');
+  const subList = document.getElementById('addSubList');
+  // L1 dropdown (exclude the catch-all "Other")
+  l1.innerHTML = Object.keys(L1_META).filter(n => n !== 'Other').map(n => `<option>${esc(n)}</option>`).join('');
+  domain.value = 'ABAP';
+  cat.innerHTML = ABAP_ADD_CATS.map(c => `<option>${esc(c)}</option>`).join('');
+  const subs = [...new Set((State.processAreas || []).filter(p => getL1(p.name) === l1.value).map(p => p.name))].sort();
+  subList.innerHTML = subs.map(s => `<option value="${esc(s)}">`).join('');
+  ['addName', 'addProcess', 'addDesc', 'addAuthor', 'addPackage'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('addAuthor').value = (State.assistant && State.assistant.user) || '';
+  setAddStatus('', '');
+  modal.classList.add('open');
+  setTimeout(() => document.getElementById('addName').focus(), 60);
+}
+
+async function saveAddForm() {
+  const v = id => document.getElementById(id).value.trim();
+  const name = v('addName').toUpperCase();
+  const process = v('addProcess');
+  if (!/^[ZY]/.test(name)) { setAddStatus('Object name must start with Z or Y.', 'err'); return; }
+  if (!process) { setAddStatus('Please choose or type a Sub-Process area.', 'err'); return; }
+  const btn = document.getElementById('addSave');
+  const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'Saving…';
+  try {
+    const body = {
+      name,
+      domain: v('addDomain'),
+      category: v('addCategory'),
+      l1: v('addL1'),
+      process,
+      description: v('addDesc'),
+      author: v('addAuthor'),
+      package: v('addPackage')
+    };
+    const r = await fetch('/api/objects/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await r.json().catch(() => ({}));
+    if (r.ok && res.ok) {
+      try {
+        const dr = await fetch('/api/data', { cache: 'no-store' });
+        if (dr.ok) { applyData(await dr.json()); initProcess(); renderCustTable(); }
+      } catch (e) { }
+      document.getElementById('addModal').classList.remove('open');
+      toast(`It's updated to the Local files · ${name} → ${body.l1} › ${process}`);
+    } else {
+      setAddStatus(res.error || 'Could not add the object.', 'err');
+    }
+  } catch (e) {
+    setAddStatus('Could not reach the backend.', 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
+  }
 }
 
 /* footfall: count clicks and flush periodically + on page hide */
@@ -115,6 +209,9 @@ function applyData(data) {
   const RENAME = { 'Unassigned': 'BW Objects' };
   State.processAreas.forEach(p => { if (RENAME[p.name]) p.name = RENAME[p.name]; });
   State.objects.forEach(o => { if (RENAME[o.process]) o.process = RENAME[o.process]; });
+  // manual objects can carry an L1 so their new sub-process shows under it
+  State.l1Override = {};
+  State.objects.forEach(o => { if (o.l1 && o.process) State.l1Override[o.process] = o.l1; });
   State.edges.forEach(e => {
     if (RENAME[e.source]) e.source = RENAME[e.source];
     if (RENAME[e.target]) e.target = RENAME[e.target];
@@ -193,6 +290,7 @@ const L1_META = {
 // Sub Process Area (L2)  ->  Process Area (L1)
 const L2_TO_L1 = {
   'Unassigned': 'Livesite', 'BW Objects': 'Livesite', 'API': 'Livesite',
+  'Unmapped (SAP MS1)': 'Other',
   'Engineering': 'Livesite', 'Table maintenace': 'Livesite', 'AIF': 'Livesite',
   'Load CPM master Data': 'Livesite', 'Update Delivery Location': 'Livesite',
   'Utility to Delete Cube DSO and PSA': 'Livesite',
@@ -223,7 +321,7 @@ const L2_TO_L1 = {
   'Read Actual': 'Reporting',
 };
 function getL1(l2name) {
-  return L2_TO_L1[l2name] || 'Other';
+  return (State.l1Override && State.l1Override[l2name]) || L2_TO_L1[l2name] || 'Other';
 }
 
 /* aggregate visible L2 areas into their L1 groups */
@@ -764,12 +862,39 @@ function initCustom() {
   document.getElementById('btnExport').addEventListener('click', exportExcel);
   document.getElementById('btnRefresh').addEventListener('click', refreshFromSap);
 
+  const localTgl = document.getElementById('localOnlyToggle');
+  if (localTgl) {
+    localTgl.checked = !!State.custLocalOnly;
+    localTgl.addEventListener('change', e => {
+      State.custLocalOnly = e.target.checked;
+      const st = document.getElementById('localOnlyState');
+      if (st) { st.textContent = e.target.checked ? 'on' : 'off'; st.classList.toggle('on', e.target.checked); }
+      renderCustTable();
+    });
+  }
+
   State.custSort = { key: 'name', dir: 1 };
+  renderCustPackages();
   renderCustTable();
+  loadRefreshStatus();
+}
+
+/* current SAP fetch scope (packages) shown under the Custom Objects tab */
+function renderCustPackages() {
+  const el = document.getElementById('custPackages');
+  if (!el) return;
+  const pkgs = (State.data && State.data.packages) || [];
+  el.innerHTML = pkgs.length
+    ? pkgs.map(p => `<span class="pkgchip">${esc(p)}</span>`).join('')
+    : '<span class="muted">not configured</span>';
 }
 
 function getCustRows() {
   let rows = State.objects.filter(o => o.custom);
+  // show only objects that live in the local files (hide live SAP-fetched)
+  if (State.custLocalOnly) {
+    rows = rows.filter(o => o.source !== 'SAP ADT (live)');
+  }
   // global search
   if (State.custSearch.trim()) {
     const q = State.custSearch;
@@ -827,7 +952,7 @@ function exportExcel() {
 async function refreshFromSap() {
   const btn = document.getElementById('btnRefresh');
   const orig = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Connecting to MS1…';
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Fetching all objects from MS1…';
   try {
     const r = await fetch('/api/refresh', { method: 'POST' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -835,19 +960,40 @@ async function refreshFromSap() {
     if (res.status === 'ok' && res.data) {
       applyData(res.data);
       initProcess(); initTech(); renderCustTable();
+      renderCustPackages();
       const live = (res.data.source === 'live');
       toast(`${live ? 'Live refresh from ' : 'Rebuilt from '}${res.source || 'SAP MS1'} · ` +
             `${res.data.objects.length} objects`, !live);
-      if (!live && res.message) setTimeout(() => toast(res.message, true), 3200);
+      if (res.message) setTimeout(() => toast(res.message, !live), 3200);
+      loadRefreshStatus();
     } else {
       toast('Refresh returned: ' + (res.message || 'no data'), true);
     }
   } catch (e) {
-    toast('SAP refresh needs the backend (python app.py) with RFC creds. ' +
+    toast('SAP refresh needs the backend (python app.py) reachable. ' +
           'Open ⚙ SAP Connection to configure MS1.', true);
   } finally {
     btn.disabled = false; btn.innerHTML = orig;
   }
+}
+
+/* ---------- Last live snapshot indicator (Excel + timestamp) ---------- */
+async function loadRefreshStatus() {
+  const el = document.getElementById('custSync');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/refresh/status', { cache: 'no-store' });
+    if (!r.ok) return;
+    const info = await r.json();
+    const lr = info.liveRefresh;
+    if (lr && lr.at) {
+      el.innerHTML = `⟳ Live SAP snapshot: <b>${esc(lr.at)}</b> · ` +
+        `${lr.abap_live || 0} ABAP live` +
+        (info.excel ? ` · <a href="/api/refresh/export" title="Download ${esc(info.excel.name)}">⬇ ${esc(info.excel.name)}</a>` : '');
+    } else if (info.generated) {
+      el.textContent = `Data generated: ${info.generated}`;
+    }
+  } catch (e) { /* ignore */ }
 }
 
 /* ---------- SAP MS1 connection modal ---------- */
@@ -1215,6 +1361,7 @@ function initAssistant() {
       + chip('Which FM deletes cube data?')
       + chip('Forecast revenue query')
       + chip('Planning function to copy FF revenue')
+      + `<span class="achip addform">➕ Add object</span>`
       + chip('Clear chat')
       + `</div>`);
   }
@@ -1222,6 +1369,7 @@ function initAssistant() {
 
   function clearChat() {
     body.innerHTML = ''; delete body.dataset.greeted;
+    State.wizard = null;
     greet(); body.dataset.greeted = '1';
   }
 
@@ -1232,13 +1380,15 @@ function initAssistant() {
   function addBot(html) {
     const d = document.createElement('div'); d.className = 'msg bot'; d.innerHTML = html;
     body.appendChild(d); body.scrollTop = body.scrollHeight;
-    d.querySelectorAll('.achip').forEach(c => c.addEventListener('click', () => { input.value = c.dataset.q; ask(); }));
+    d.querySelectorAll('.achip').forEach(c => c.addEventListener('click', () => { if (c.dataset.q) { input.value = c.dataset.q; ask(); } }));
+    d.querySelectorAll('.addform').forEach(c => c.addEventListener('click', () => openAddForm()));
     d.querySelectorAll('.open2').forEach(a => a.addEventListener('click', () => openObject(a.dataset.name)));
     return d;
   }
 
   const HELP = `I turn plain-English questions into the exact custom SAP object you need.<br>`
     + `• <b>Find objects</b>: “which FM deletes cube data”, “forecast revenue query”, “planning function to copy FF revenue”.<br>`
+    + `• <b>Add an object</b>: say “add object” and I'll capture its details + process area and save it to the local repository.<br>`
     + `• <b>Commands</b>: “clear chat” / “reset” to wipe this conversation, “help” for this message.<br>`
     + `I rank by confidence and show matches above 80%. When SAP MS1 is connected I also verify against FOX / ABAP code comments.`;
 
@@ -1250,8 +1400,90 @@ function initAssistant() {
         || /^(clear|reset|clean|wipe|start over|new chat|clear all)\.?$/.test(s)
         || /\bclear (the )?(chat|response|screen|conversation)\b/.test(s)) return { action: 'clear' };
     if (/^(help|examples?|what can you|how (do|does|to)|guide|usage)\b/.test(s) || s === '?') return { action: 'help' };
+    if ((/^(add|create|register|insert)\b/.test(s) &&
+         /\b(object|abap|bw|fm|function|module|class|query|planning|sequence|filter|infoprovider|repository|tile|local)\b/.test(s))
+        || /\badd (an?|new|this)\b.*\bobject\b/.test(s) || s === 'add object') return { action: 'add' };
     if (/^(hi|hii|hey|hello|yo|thanks|thank you|thx|good (morning|afternoon|evening))\b/.test(s)) return { action: 'smalltalk' };
     return { action: 'search' };
+  }
+
+  /* ---- add-object wizard: capture details + process, save to local repo ---- */
+  function startAddWizard() {
+    State.wizard = { step: 'name', data: {} };
+    addBot(`Let's add a custom object to the <b>local repository</b>. `
+      + `First — what is the <b>object name</b>? (Z*/Y*)  <span class="muted">(type <i>cancel</i> anytime)</span>`);
+  }
+
+  function handleWizard(q) {
+    const w = State.wizard;
+    const val = q.trim();
+    if (/^(cancel|stop|abort|exit|quit)$/i.test(val)) { State.wizard = null; addBot('Cancelled — nothing was added.'); return; }
+    const chipRow = arr => `<div class="achips">${arr.map(chip).join('')}</div>`;
+    switch (w.step) {
+      case 'name':
+        if (!/^[zy]/i.test(val)) { addBot('Please enter a custom object name starting with <b>Z</b> or <b>Y</b> (or type cancel).'); return; }
+        w.data.name = val.toUpperCase(); w.step = 'domain';
+        addBot(`Is <b>${esc(w.data.name)}</b> an ABAP or BW object?` + chipRow(['ABAP', 'BW']));
+        return;
+      case 'domain':
+        w.data.domain = /bw/i.test(val) ? 'BW' : 'ABAP'; w.step = 'category';
+        addBot(`What is the <b>category</b>?` + chipRow(w.data.domain === 'ABAP'
+          ? ['Function Module', 'Class', 'Interface', 'Table Maintenance', 'Program', 'Method']
+          : ['BEx Query', 'Planning Sequence', 'Planning Function', 'Filter', 'InfoProvider', 'Aggregation Level', 'InfoObject']));
+        return;
+      case 'category':
+        w.data.category = val; w.step = 'l1';
+        addBot(`Which <b>Process Area (L1)</b> tile does it belong to?`
+          + chipRow(Object.keys(L1_META).filter(x => x !== 'Other')));
+        return;
+      case 'l1': {
+        w.data.l1 = val; w.step = 'process';
+        const subs = [...new Set(State.processAreas.filter(p => getL1(p.name) === val).map(p => p.name))].slice(0, 10);
+        addBot(`Which <b>Sub-Process area</b> (tile) should it appear under? Pick one or type a new name.`
+          + (subs.length ? chipRow(subs) : ''));
+        return;
+      }
+      case 'process':
+        w.data.process = val; w.step = 'description';
+        addBot(`Add a short <b>description</b>? (or type <i>skip</i>)`);
+        return;
+      case 'description': {
+        w.data.description = /^skip$/i.test(val) ? '' : val; w.step = 'confirm';
+        const d = w.data;
+        addBot(`Please confirm:<br>• <b>${esc(d.name)}</b> — ${esc(d.category)} (${esc(d.domain)})`
+          + `<br>• Tile: <b>${esc(d.l1)}</b> › <b>${esc(d.process)}</b>`
+          + (d.description ? `<br>• ${esc(d.description)}` : '')
+          + chipRow(['Save', 'Cancel']));
+        return;
+      }
+      case 'confirm':
+        if (/^save$/i.test(val)) saveWizardObject();
+        else { State.wizard = null; addBot('Cancelled — nothing was added.'); }
+        return;
+    }
+  }
+
+  async function saveWizardObject() {
+    const d = State.wizard ? State.wizard.data : null;
+    State.wizard = null;
+    if (!d) return;
+    try {
+      const r = await fetch('/api/objects/add', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ author: (State.assistant && State.assistant.user) || '' }, d)),
+      });
+      const res = await r.json();
+      if (res.ok) {
+        try {
+          const dr = await fetch('/api/data', { cache: 'no-store' });
+          if (dr.ok) { applyData(await dr.json()); initProcess(); renderCustTable(); }
+        } catch (e) {}
+        addBot(`✅ <b>It's updated to the Local files.</b><br>${esc(d.name)} now appears under `
+          + `<b>${esc(d.l1)} › ${esc(d.process)}</b>.`);
+      } else {
+        addBot('⚠️ ' + esc(res.error || 'Could not add the object.'));
+      }
+    } catch (e) { addBot('⚠️ Could not reach the backend to save (run python app.py / serve.py).'); }
   }
 
   function doSearch(displayQ, searchQ) {
@@ -1347,10 +1579,14 @@ function initAssistant() {
     if (!q) return;
     addUser(q); input.value = '';
 
+    // active "add object" wizard takes priority
+    if (State.wizard) { handleWizard(q); return; }
+
     // 1) instant local commands
     const local = localIntent(q);
     if (local.action === 'clear') { clearChat(); return; }
     if (local.action === 'help') { addBot(HELP); return; }
+    if (local.action === 'add') { startAddWizard(); return; }
     if (local.action === 'smalltalk') {
       addBot(`Hi! Ask me for any custom ABAP or BW object — e.g. “planning function to copy FF revenue”. Say “help” for more.`);
       return;
