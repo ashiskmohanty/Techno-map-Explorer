@@ -411,6 +411,9 @@ tbody tr:hover{background:var(--panel2)}
 .msel-opt .mv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msel-cnt{margin-left:auto;color:var(--muted);font-size:10.5px;flex:0 0 auto}
 .msel-empty{color:var(--muted);font-size:12px;padding:8px 6px}
+.btn-edit{background:var(--panel2);border:1px solid var(--border);border-radius:7px;
+  padding:3px 9px;color:var(--accent);font-size:11.5px;cursor:pointer;white-space:nowrap}
+.btn-edit:hover{border-color:var(--accent);background:var(--panel)}
 .afoot input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit}
 .afoot input:focus{outline:none;border-color:var(--accent)}
@@ -779,6 +782,43 @@ tbody tr:hover{background:var(--panel2)}
     <div class="modal-foot">
       <button class="btn" id="addCancel">Cancel</button>
       <button class="btn green" id="addSave" style="margin-left:auto">💾 Save to local files</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin: edit an object's classification (audited) -->
+<div class="modal-back" id="editModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span>✏️</span>
+      <h2>Edit object <span class="mono" id="editName" style="font-size:13px"></span></h2>
+      <span class="close" id="editClose">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div class="conn-status" id="editStatus"></div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Category</label>
+          <select id="editCategory"></select>
+        </div>
+        <div class="field">
+          <label>Primary Process (L1 tile)</label>
+          <select id="editL1"></select>
+        </div>
+        <div class="field full">
+          <label>Process Area (sub-process)</label>
+          <input list="editSubList" id="editProcess" placeholder="pick existing or type new" autocomplete="off"/>
+          <datalist id="editSubList"></datalist>
+        </div>
+      </div>
+      <p class="muted" style="font-size:11.5px;margin:14px 0 0">
+        🔒 Admin only. Every change is written to the audit trail
+        (<span class="mono">audit_log.jsonl</span>) with a timestamp.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="editCancel">Cancel</button>
+      <button class="btn green" id="editSave" style="margin-left:auto">💾 Save &amp; log</button>
     </div>
   </div>
 </div>

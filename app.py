@@ -55,7 +55,7 @@ def load_or_build():
         build_data.build()
     with open(path, "r", encoding="utf-8") as fh:
         data = json.load(fh)
-    return _merge_manual(data)
+    return _apply_edits(_merge_manual(data))
 
 
 # --------------------------------------------------------------------------- #
@@ -97,6 +97,79 @@ def _merge_manual(data):
         data["stats"] = build_data.build_stats(data["objects"], {})
         data["manualCount"] = len(manual)
     return data
+
+
+# --------------------------------------------------------------------------- #
+# Admin edits (Category / Process area / Primary area) + audit trail
+# --------------------------------------------------------------------------- #
+EDITS_FILE = os.environ.get("PSPE_EDITS_FILE") or os.path.join(HERE, "object_edits.json")
+AUDIT_FILE = os.environ.get("PSPE_AUDIT_FILE") or os.path.join(HERE, "audit_log.jsonl")
+
+
+def _load_edits():
+    try:
+        with open(EDITS_FILE, "r", encoding="utf-8") as fh:
+            return json.load(fh) or {}
+    except Exception:
+        return {}
+
+
+def _save_edits(edits):
+    tmp = f"{EDITS_FILE}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(edits, fh, indent=1, ensure_ascii=False)
+    os.replace(tmp, EDITS_FILE)
+
+
+def _apply_edits(data):
+    """Overlay admin edits (category / process / l1) onto the served objects."""
+    edits = _load_edits()
+    if not edits:
+        return data
+    changed = False
+    for o in data.get("objects", []):
+        e = edits.get(o.get("name", "").upper())
+        if not e:
+            continue
+        for f in ("category", "process", "l1"):
+            if e.get(f):
+                o[f] = e[f]
+        o["edited"] = True
+        changed = True
+    if changed:
+        data["processAreas"] = _recount_process_areas(data["objects"])
+        data["stats"] = build_data.build_stats(data["objects"], {})
+    return data
+
+
+def _audit(action, **fields):
+    """Append an audit-trail record (JSONL, append-only) with a timestamp."""
+    import time as _time
+    try:
+        os.makedirs(os.path.dirname(AUDIT_FILE) or ".", exist_ok=True)
+        rec = {"ts": _time.strftime("%Y-%m-%d %H:%M:%S"), "action": action}
+        rec.update({k: v for k, v in fields.items() if v is not None})
+        with open(AUDIT_FILE, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def _load_audit(limit=500):
+    try:
+        with open(AUDIT_FILE, "r", encoding="utf-8") as fh:
+            lines = fh.readlines()[-limit:]
+    except Exception:
+        return []
+    out = []
+    for ln in lines:
+        ln = ln.strip()
+        if ln:
+            try:
+                out.append(json.loads(ln))
+            except Exception:
+                pass
+    return out
 
 
 
@@ -632,6 +705,62 @@ def api_objects_delete(name):
         items = [i for i in _load_manual() if i.get("name", "").upper() != name.upper()]
         _save_manual(items)
     return jsonify({"ok": True})
+
+
+@app.route("/api/objects/edit", methods=["POST"])
+def api_objects_edit():
+    """Admin-only: update an object's Category / Process area / Primary area and
+    record the change in the audit-trail log with a timestamp."""
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    import time as _time
+    p = request.get_json(silent=True) or {}
+    name = (p.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "name is required"}), 400
+
+    data = load_or_build()
+    cur = next((o for o in data["objects"] if o["name"].upper() == name.upper()), None)
+    if not cur:
+        return jsonify({"ok": False, "error": f"{name} not found."}), 404
+
+    # before-image: prefer the client's displayed values (incl. computed L1),
+    # fall back to what the server currently holds.
+    cb = p.get("before") or {}
+    before = {
+        "category": cb.get("category", cur.get("category", "")),
+        "process": cb.get("process", cur.get("process", "")),
+        "l1": cb.get("l1", cur.get("l1") or ""),
+    }
+    after = {
+        "category": (p.get("category") or before["category"]).strip(),
+        "process": (p.get("process") or before["process"]).strip(),
+        "l1": (p.get("l1") or before["l1"]).strip(),
+    }
+    by = (p.get("by") or "admin").strip()
+
+    with _FileLock(EDITS_FILE):
+        edits = _load_edits()
+        edits[name.upper()] = {**after, "at": _time.strftime("%Y-%m-%d %H:%M:%S"), "by": by}
+        _save_edits(edits)
+
+    # audit trail (only the fields that actually changed)
+    changes = {f: {"from": before[f], "to": after[f]} for f in after if before[f] != after[f]}
+    _audit("object_edit", object=name, by=by, changes=changes,
+           before=before, after=after)
+    _track("object_edit", obj=name, user=by)
+
+    fresh = load_or_build()
+    return jsonify({"ok": True, "before": before, "after": after,
+                    "changes": changes, "data": fresh})
+
+
+@app.route("/api/admin/audit")
+def api_admin_audit():
+    """Admin-only: recent audit-trail entries (most recent first)."""
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    return jsonify({"ok": True, "entries": list(reversed(_load_audit()))})
 
 
 @app.route("/api/admin/status")

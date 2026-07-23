@@ -12,6 +12,8 @@ feedback.json
 usage.jsonl
 admin_config.json
 manual_objects.json
+object_edits.json
+audit_log.jsonl
 exports/
 
 # --- Python ---

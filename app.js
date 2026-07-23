@@ -16,6 +16,7 @@ const State = {
   custFilters: {},   // column -> wildcard text
   custSearch: '',
   custLocalOnly: false, // Custom Objects: show only local-file objects (hide live SAP)
+  isAdmin: false,    // admin key verified -> unlock Edit actions
   l1Filter: null,    // selected Level-1 process area (drill-down)
   sapConnected: false, // green header dot when a live SAP link exists
   teachings: [],     // user corrections that train the assistant
@@ -59,10 +60,17 @@ function wildcard(pattern, value) {
 /* ---------- boot ---------- */
 async function boot() {
   let data = null;
+  // prefer the server endpoint: it overlays manual additions + admin edits
   try {
-    const r = await fetch('data.json', { cache: 'no-store' });
+    const r = await fetch('/api/data', { cache: 'no-store' });
     if (r.ok) data = await r.json();
-  } catch (e) { /* file:// — fall through */ }
+  } catch (e) { /* not served — fall through */ }
+  if (!data) {
+    try {
+      const r = await fetch('data.json', { cache: 'no-store' });
+      if (r.ok) data = await r.json();
+    } catch (e) { /* file:// — fall through */ }
+  }
   if (!data && window.__PSPE_DATA__) data = window.__PSPE_DATA__;
   if (!data) { document.body.innerHTML = '<div class="empty">Could not load data.json. Run <b>build_data.py</b> first or start the server (<b>python app.py</b>).</div>'; return; }
   applyData(data);
@@ -164,6 +172,97 @@ async function saveAddForm() {
     }
   } catch (e) {
     setAddStatus('Could not reach the backend.', 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
+  }
+}
+
+/* ===================== ADMIN EDIT (Category / Process / Primary) ===================== */
+function initEditForm() {
+  const modal = document.getElementById('editModal');
+  if (!modal) return;
+  const close = () => modal.classList.remove('open');
+  document.getElementById('editClose').addEventListener('click', close);
+  document.getElementById('editCancel').addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  document.getElementById('editSave').addEventListener('click', saveEditForm);
+}
+
+function openEditForm(name) {
+  if (!State.isAdmin) return;
+  const modal = document.getElementById('editModal');
+  if (!modal) return;
+  const o = State.objects.find(x => x.name === name) ||
+            State.objects.find(x => (x.name || '').toUpperCase() === (name || '').toUpperCase());
+  if (!o) { toast('Object not found: ' + name, true); return; }
+
+  const l1Now = o.primaryProcess || getL1(o.process);
+  State.editing = {
+    name: o.name,
+    before: { category: o.category || '', process: o.process || '', l1: l1Now },
+  };
+
+  // category options for the object's domain (keep the current value even if custom)
+  const cats = (o.domain === 'BW' ? BW_ADD_CATS : ABAP_ADD_CATS).slice();
+  if (o.category && !cats.includes(o.category)) cats.unshift(o.category);
+  const catSel = document.getElementById('editCategory');
+  catSel.innerHTML = cats.map(c => `<option ${c === o.category ? 'selected' : ''}>${esc(c)}</option>`).join('');
+
+  // L1 (Primary Process) options
+  const l1Sel = document.getElementById('editL1');
+  l1Sel.innerHTML = Object.keys(L1_META).map(n => `<option ${n === l1Now ? 'selected' : ''}>${esc(n)}</option>`).join('');
+
+  // sub-process suggestions (all existing) + current value
+  const subs = [...new Set(State.objects.map(x => x.process).filter(Boolean))].sort();
+  document.getElementById('editSubList').innerHTML = subs.map(s => `<option value="${esc(s)}">`).join('');
+  document.getElementById('editProcess').value = o.process || '';
+
+  document.getElementById('editName').textContent = o.name;
+  setEditStatus('', '');
+  modal.classList.add('open');
+  setTimeout(() => catSel.focus(), 60);
+}
+
+function setEditStatus(msg, kind) {
+  const el = document.getElementById('editStatus'); if (!el) return;
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.color = kind === 'err' ? '#ffb3bd' : (kind === 'ok' ? '#8fe3a8' : 'var(--muted)');
+}
+
+async function saveEditForm() {
+  if (!State.editing) return;
+  const v = id => document.getElementById(id).value.trim();
+  const process = v('editProcess');
+  if (!process) { setEditStatus('Process Area is required.', 'err'); return; }
+  const after = { category: v('editCategory'), process, l1: v('editL1') };
+  const btn = document.getElementById('editSave');
+  const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'Saving…';
+  try {
+    const r = await fetch('/api/objects/edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': State.adminKey || '' },
+      body: JSON.stringify({
+        name: State.editing.name,
+        category: after.category, process: after.process, l1: after.l1,
+        before: State.editing.before,
+        by: State.adminUser || 'admin',
+      }),
+    });
+    if (r.status === 403) { setEditStatus('Admin key required or invalid.', 'err'); return; }
+    const res = await r.json().catch(() => ({}));
+    if (r.ok && res.ok && res.data) {
+      applyData(res.data);
+      initProcess(); renderCustTable(); renderCustPackages();
+      document.getElementById('editModal').classList.remove('open');
+      const nch = Object.keys(res.changes || {}).length;
+      toast(`Updated & logged · ${State.editing.name}${nch ? ` (${nch} field${nch > 1 ? 's' : ''})` : ''}`);
+    } else {
+      setEditStatus(res.error || 'Could not save the change.', 'err');
+    }
+  } catch (e) {
+    setEditStatus('Could not reach the backend.', 'err');
   } finally {
     btn.disabled = false; btn.innerHTML = orig;
   }
@@ -852,25 +951,14 @@ const CUST_COLS = [
 ];
 
 function initCustom() {
-  const labels = document.getElementById('custHeadLabels');
-  const filters = document.getElementById('custHeadFilters');
-  labels.innerHTML = CUST_COLS.map(c => `<th><div class="th-l" data-sort="${c.key}">${c.label} <span class="muted">⇅</span></div></th>`).join('');
-  filters.innerHTML = CUST_COLS.map(c => MULTI_COLS.has(c.key)
-    ? `<th><div class="msel" data-col="${c.key}"><button type="button" class="msel-btn"><span class="msel-lbl">All</span><span>▾</span></button></div></th>`
-    : `<th><input data-col="${c.key}" placeholder="filter *"/></th>`).join('');
-
-  filters.querySelectorAll('input[data-col]').forEach(inp =>
-    inp.addEventListener('input', () => { State.custFilters[inp.dataset.col] = inp.value; renderCustTable(); }));
-  filters.querySelectorAll('.msel .msel-btn').forEach(btn =>
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      openMsel(btn.closest('.msel').dataset.col, btn);
-    }));
-  labels.querySelectorAll('[data-sort]').forEach(th =>
-    th.addEventListener('click', () => { sortCust(th.dataset.sort); }));
+  buildCustHeader();
   document.getElementById('custSearch').addEventListener('input', e => { State.custSearch = e.target.value; renderCustTable(); });
   document.getElementById('btnExport').addEventListener('click', exportExcel);
   document.getElementById('btnRefresh').addEventListener('click', refreshFromSap);
+  document.getElementById('custBody').addEventListener('click', e => {
+    const b = e.target.closest('.btn-edit');
+    if (b) openEditForm(b.dataset.name);
+  });
 
   const localTgl = document.getElementById('localOnlyToggle');
   if (localTgl) {
@@ -884,9 +972,35 @@ function initCustom() {
   }
 
   State.custSort = { key: 'name', dir: 1 };
+  initEditForm();
   renderCustPackages();
   renderCustTable();
   loadRefreshStatus();
+}
+
+/* (re)build the Custom Objects header + per-column filters; adds an admin-only
+   Actions column when the admin key is verified */
+function buildCustHeader() {
+  const labels = document.getElementById('custHeadLabels');
+  const filters = document.getElementById('custHeadFilters');
+  let L = CUST_COLS.map(c => `<th><div class="th-l" data-sort="${c.key}">${c.label} <span class="muted">⇅</span></div></th>`).join('');
+  let F = CUST_COLS.map(c => MULTI_COLS.has(c.key)
+    ? `<th><div class="msel" data-col="${c.key}"><button type="button" class="msel-btn"><span class="msel-lbl">All</span><span>▾</span></button></div></th>`
+    : `<th><input data-col="${c.key}" placeholder="filter *"/></th>`).join('');
+  if (State.isAdmin) { L += `<th><div class="th-l">Actions</div></th>`; F += `<th></th>`; }
+  labels.innerHTML = L;
+  filters.innerHTML = F;
+
+  filters.querySelectorAll('input[data-col]').forEach(inp =>
+    inp.addEventListener('input', () => { State.custFilters[inp.dataset.col] = inp.value; renderCustTable(); }));
+  filters.querySelectorAll('.msel .msel-btn').forEach(btn =>
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openMsel(btn.closest('.msel').dataset.col, btn);
+    }));
+  labels.querySelectorAll('[data-sort]').forEach(th =>
+    th.addEventListener('click', () => { sortCust(th.dataset.sort); }));
+  CUST_COLS.forEach(c => { if (Array.isArray(State.custFilters[c.key]) && State.custFilters[c.key].length) updateMselLabel(c.key); });
 }
 
 /* columns filtered by a multi-select of their unique values */
@@ -1047,6 +1161,7 @@ function renderCustTable() {
     <td>${esc(o.author)}</td>
     <td class="muted">${esc(o.created)}</td>
     <td>${valBadge(o.validity) || '<span class="muted">—</span>'}</td>
+    ${State.isAdmin ? `<td><button class="btn-edit" data-name="${esc(o.name)}">✏️ Edit</button></td>` : ''}
   </tr>`).join('');
   document.getElementById('custCount').textContent =
     `${rows.length} object${rows.length !== 1 ? 's' : ''}${rows.length > 2000 ? ' (showing first 2000)' : ''}`;
@@ -1982,8 +2097,11 @@ function initAdmin() {
   State.adminKey = key;
   loadAdminMetrics().then(ok => {
     if (!ok) { try { localStorage.removeItem('pspe.adminKey'); } catch (e) {} return; }
+    State.isAdmin = true;
     const tab = document.getElementById('tabAdmin');
     if (tab) tab.style.display = '';
+    buildCustHeader();          // reveal the admin-only Edit column
+    renderCustTable();
     renderAdminKpisLists();
     const rb = document.getElementById('admRefresh');
     if (rb) rb.onclick = async () => { await loadAdminMetrics(); renderAdminKpisLists(); renderAdminCharts(); toast('Admin metrics refreshed'); };
