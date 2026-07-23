@@ -193,11 +193,106 @@ def adt_search(query: str, cfg: Optional[Dict[str, Any]] = None,
         out.append({
             "name": name,
             "type": ADT_TYPE.get((typ or "").split("/")[0], (typ or "Object")),
+            "adt_type": typ,
+            "uri": _attr(el, "uri"),
             "description": _attr(el, "description"),
             "package": _attr(el, "packageName"),
             "source": "SAP ADT",
         })
     return out
+
+
+# --------------------------------------------------------------------------- #
+# ADT where-used (usageReferences) over HTTP - no SDK
+# --------------------------------------------------------------------------- #
+import http.cookiejar as _cookiejar
+
+USAGE_REFS = "/sap/bc/adt/repository/informationsystem/usageReferences"
+_WU_BODY = ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<usagereferences:usageReferenceRequest '
+            'xmlns:usagereferences="http://www.sap.com/adt/ris/usageReferences">'
+            '<usagereferences:affectedObjects/></usagereferences:usageReferenceRequest>')
+
+
+def _opener(cfg):
+    handlers = [urllib.request.HTTPCookieProcessor(_cookiejar.CookieJar())]
+    ctx = _ssl_ctx(cfg)
+    if ctx:
+        handlers.append(urllib.request.HTTPSHandler(context=ctx))
+    return urllib.request.build_opener(*handlers)
+
+
+def _auth_header(cfg):
+    tok = base64.b64encode(f"{cfg['user']}:{cfg['passwd']}".encode()).decode()
+    return {"Authorization": f"Basic {tok}"}
+
+
+def _fetch_csrf(cfg, opener):
+    base = cfg["httpbase"].rstrip("/")
+    url = base + ADT_SEARCH + "?operation=quickSearch&query=Z*&maxResults=1&sap-client=" + cfg.get("client", "122")
+    h = _auth_header(cfg); h.update({"Accept": "application/xml", "X-CSRF-Token": "Fetch"})
+    req = urllib.request.Request(url, headers=h)
+    with opener.open(req, timeout=_TIMEOUT) as r:
+        return r.headers.get("x-csrf-token") or r.headers.get("X-CSRF-Token") or ""
+
+
+def where_used(name: str, cfg: Optional[Dict[str, Any]] = None,
+               max_refs: int = 25) -> List[Dict[str, str]]:
+    """Live ADT where-used list for a Z/Y object over HTTP (no SDK).
+
+    Returns dependency edges [{source, target, kind, type}] where `target` is a
+    custom object that references `source`. Best effort; empty on any problem.
+    """
+    cfg = _cfg(cfg)
+    base = (name or "").split("=>")[0].strip()
+    if not is_configured(cfg) or not base:
+        return []
+    # 1) resolve the object's ADT uri (exact-name match preferred)
+    hits = adt_search(base, cfg, max_results=8)
+    obj = next((h for h in hits if h["name"].upper() == base.upper() and h.get("uri")), None)
+    if not obj:
+        return []
+    import xml.etree.ElementTree as ET
+    try:
+        opener = _opener(cfg)
+        csrf = _fetch_csrf(cfg, opener)
+        url = (cfg["httpbase"].rstrip("/") + USAGE_REFS
+               + "?uri=" + urllib.parse.quote(obj["uri"], safe="")
+               + "&sap-client=" + cfg.get("client", "122"))
+        h = _auth_header(cfg)
+        h.update({
+            "X-CSRF-Token": csrf,
+            "Content-Type": "application/vnd.sap.adt.repository.usagereferences.request.v1+xml",
+            "Accept": "application/vnd.sap.adt.repository.usagereferences.result.v1+xml",
+        })
+        req = urllib.request.Request(url, data=_WU_BODY.encode(), headers=h, method="POST")
+        with opener.open(req, timeout=_TIMEOUT) as r:
+            xml = r.read().decode("utf-8", "replace")
+        root = ET.fromstring(xml)
+    except Exception:
+        return []
+
+    edges, seen = [], set()
+    for el in root.iter():
+        if not el.tag.endswith("adtObject"):
+            continue
+        rn = _attr(el, "name")
+        rt = _attr(el, "type")
+        if not rn or rt.startswith("DEVC"):          # skip package nodes
+            continue
+        if rn.upper() == base.upper():
+            continue
+        if not rn.upper().startswith(("Z", "Y")):    # custom only
+            continue
+        if rn.upper() in seen:
+            continue
+        seen.add(rn.upper())
+        edges.append({"source": base, "target": rn, "kind": "where-used",
+                      "type": ADT_TYPE.get((rt or "").split("/")[0], rt or "Object")})
+        if len(edges) >= max_refs:
+            break
+    return edges
+
 
 
 def live_search(query: str, names: Optional[List[str]] = None,

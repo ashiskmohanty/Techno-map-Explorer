@@ -183,7 +183,8 @@ def build():
     # ---- ABAP objects ----------------------------------------------------- #
     for sheet, rows in abap_wb.items():
         for d in rows_as_dicts(rows):
-            name = s(d.get("Object name"))
+            name = s(d.get("Object name") or d.get("ABAP Object name")
+                     or d.get("Object Name"))
             if not name:
                 continue
             add_obj({

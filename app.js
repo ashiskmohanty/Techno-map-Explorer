@@ -71,6 +71,39 @@ async function boot() {
   initDrawer();
   initSapModal();
   initAssistant();
+  initAdmin();
+  initFootfall();
+}
+
+/* footfall: count clicks and flush periodically + on page hide */
+function initFootfall() {
+  let clicks = 0;
+  document.addEventListener('click', () => { clicks++; }, true);
+  const flush = () => {
+    if (clicks <= 0) return;
+    const n = clicks; clicks = 0;
+    const body = JSON.stringify({ type: 'click', n, user: (State.assistant && State.assistant.user) || '' });
+    try {
+      if (navigator.sendBeacon)
+        navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+      else
+        fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true });
+    } catch (e) {}
+  };
+  setInterval(flush, 15000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+  window.addEventListener('pagehide', flush);
+  track('visit');
+}
+
+/* fire-and-forget usage event */
+function track(type, fields) {
+  try {
+    fetch('/api/track', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+      body: JSON.stringify(Object.assign({ type, user: (State.assistant && State.assistant.user) || '' }, fields || {})),
+    }).catch(() => {});
+  } catch (e) {}
 }
 
 function applyData(data) {
@@ -103,7 +136,9 @@ function initTabs() {
       t.classList.add('active');
       const v = t.dataset.view;
       document.getElementById('view-' + v).classList.add('active');
+      track('tab', { view: v });
       if (v === 'depmap') renderDepGraph();
+      if (v === 'admin') renderAdminCharts();
     });
   });
 }
@@ -449,6 +484,7 @@ function initDrawer() {
 function openDrawer(procName) {
   const p = State.processAreas.find(x => x.name === procName) || { name: procName, counts: {} };
   const objs = State.objects.filter(o => o.process === procName && o.custom);
+  track('drawer', { proc: procName });
   document.getElementById('dTitle').textContent = procName;
   document.getElementById('dSub').textContent =
     `${objs.length} custom objects · ${p.abap || 0} ABAP · ${p.bw || 0} BW · package scope ZPS_PROJ_EXEC / Z_PROF_SERVICES / ZCPM`;
@@ -562,12 +598,20 @@ function attachGraphControls(cy, ids, infoEl) {
 function renderDrawerGraph(procName, objs) {
   const container = document.getElementById('drawerGraph');
   if (State.drawerCy) { State.drawerCy.destroy(); State.drawerCy = null; }
-  const els = buildElements(objs, { onlyConnected: true });
   const info = document.getElementById('dgInfo');
+  const connected = State.sapConnected || (State.assistant && State.assistant.searchMs1);
+  let els = buildElements(objs, { onlyConnected: true });
+  let nodesOnly = false;
   if (!els.length) {
-    container.innerHTML = '<div class="empty">No linked dependencies for this process — see the object hierarchy above.</div>';
-    if (info) info.textContent = '';
-    return;
+    // no local edges — if connected, show the objects as standalone nodes so
+    // the user can pull real SAP where-used links; else show the hint.
+    if (connected && objs.length) { els = buildElements(objs, { onlyConnected: false }); nodesOnly = true; }
+    if (!els.length) {
+      container.innerHTML = '<div class="empty">No linked dependencies for this process — see the object hierarchy above.</div>';
+      if (info) info.textContent = '';
+      const b0 = document.getElementById('dgWhereUsed'); if (b0) b0.style.display = 'none';
+      return;
+    }
   }
   container.innerHTML = '';
   State.drawerCy = cytoscape({
@@ -578,29 +622,38 @@ function renderDrawerGraph(procName, objs) {
   State.drawerCy.ready(() => State.drawerCy.fit(null, 30));
   attachGraphControls(State.drawerCy,
     { zin: 'dgZoomIn', zout: 'dgZoomOut', fit: 'dgFit', reset: 'dgReset' }, info);
-  // enrich with real SAP where-used edges when a live session is available
-  if (State.data && State.data.source === 'live') enrichWhereUsed(objs);
+  if (info && nodesOnly) info.textContent = `${State.drawerCy.nodes().length} objects · click 🔗 where-used for SAP links`;
+  // on-demand: load real SAP where-used dependencies when connected
+  const wuBtn = document.getElementById('dgWhereUsed');
+  if (wuBtn) {
+    wuBtn.style.display = connected ? '' : 'none';
+    wuBtn.disabled = false; wuBtn.innerHTML = '🔗 where-used';
+    wuBtn.onclick = () => enrichWhereUsed(objs);
+  }
 }
 
 /* pull live where-used edges from SAP and merge them into the flow map */
 async function enrichWhereUsed(objs) {
   const cy = State.drawerCy;
   if (!cy) return;
-  const names = objs.filter(o => o.domain === 'ABAP').map(o => o.name);
+  const names = objs.filter(o => o.custom).map(o => o.name);
   if (!names.length) return;
+  const btn = document.getElementById('dgWhereUsed');
+  const info = document.getElementById('dgInfo');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> where-used…'; }
   try {
     const r = await fetch('/api/sap/whereused', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ names }),
     });
-    if (!r.ok) return;
+    if (!r.ok) throw new Error('http');
     const res = await r.json();
     const edges = res.edges || [];
-    if (!edges.length || cy !== State.drawerCy) return;
+    if (cy !== State.drawerCy) return;
     let added = 0;
     edges.forEach(e => {
       if (!cy.getElementById(e.target).length) {
-        cy.add({ group: 'nodes', data: { id: e.target, label: e.target, color: '#f472b6', cat: 'ABAP', proc: '', size: 18 } });
+        cy.add({ group: 'nodes', data: { id: e.target, label: e.target, color: '#f59e0b', cat: e.type || 'ABAP', proc: '', size: 18 } });
       }
       const id = e.source + '::' + e.target + '::wu';
       if (cy.getElementById(e.source).length && !cy.getElementById(id).length) {
@@ -611,10 +664,15 @@ async function enrichWhereUsed(objs) {
     if (added) {
       cy.layout(graphLayout(cy.nodes().length)).run();
       cy.fit(null, 30);
-      const info = document.getElementById('dgInfo');
-      if (info) info.textContent = `${cy.nodes().length} nodes · ${cy.edges().length} edges · SAP where-used`;
+      if (info) info.textContent = `${cy.nodes().length} nodes · ${cy.edges().length} edges · +${added} SAP where-used`;
+    } else if (info) {
+      info.textContent = `${cy.nodes().length} nodes · no additional SAP where-used links`;
     }
-  } catch (e) { /* offline / not configured - keep local edges */ }
+  } catch (e) {
+    if (info) info.textContent = 'SAP where-used unavailable (check ⚙ connection)';
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '🔗 where-used'; }
+  }
 }
 
 function renderDepGraph() {
@@ -631,8 +689,20 @@ function renderDepGraph() {
     // hide isolated nodes so the map shows real dependencies only
     const els = buildElements(objs, { onlyConnected: true });
     if (State.depCy) { State.depCy.destroy(); State.depCy = null; }
-    if (!els.length) { container.innerHTML = '<div class="empty">No linked dependencies to display for this selection.</div>'; return; }
+    if (!els.length) {
+      container.style.width = ''; container.style.height = '';
+      container.innerHTML = '<div class="empty">No linked dependencies to display for this selection.</div>';
+      return;
+    }
     container.innerHTML = '';
+    // size the canvas larger than the viewport so the scrollable wrapper shows
+    // a side scrollbar for big graphs (nodes = elements that carry no source)
+    const nodeCount = els.filter(e => e.data && e.data.source === undefined).length;
+    const scroll = document.getElementById('depScroll');
+    const vw = (scroll ? scroll.clientWidth : 1000) - 4;
+    const vh = (scroll ? scroll.clientHeight : 640) - 4;
+    container.style.width = Math.max(vw, Math.min(5200, nodeCount * 22)) + 'px';
+    container.style.height = Math.max(vh, Math.min(3200, nodeCount * 11)) + 'px';
     State.depCy = cytoscape({
       container, elements: els, style: cyStyle,
       layout: graphLayout(els.length),
@@ -750,6 +820,7 @@ function exportExcel() {
   const stamp = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `PS_Custom_Objects_MS1_${stamp}.xlsx`);
   toast(`Exported ${rows.length} objects to Excel`);
+  track('export', { n: rows.length });
 }
 
 /* ---------- Refresh from SAP MS1 ---------- */
@@ -1187,6 +1258,8 @@ function initAssistant() {
     const taught = taughtFor(searchQ);
     const results = rankObjects(searchQ, 8);
     const liveOn = !!(State.assistant && State.assistant.searchMs1);
+    const topAcc = results.length ? results[0].acc : 0;
+    track('query', { q: displayQ, matched: !!(taught.length || topAcc >= 80), topAcc, live: liveOn });
     if (!results.length && !taught.length) {
       if (liveOn) {
         const b = addBot(`No match in the local catalogue — searching SAP MS1 live…`);
@@ -1201,60 +1274,12 @@ function initAssistant() {
       return;
     }
     const bubble = addBot('');
+    bubble.dataset.q = searchQ;
     bubble.innerHTML = renderTaught(taught) + '<div class="answer">' + renderResults(displayQ, results, false) + '</div>';
     rebindBubble(bubble);
-    addFeedback(bubble, displayQ);
     addTeach(bubble, displayQ);
     if (State.data && State.data.source === 'live') enrichWithComments(searchQ, results, bubble);
     if (liveOn) enrichWithLiveSap(searchQ, results, bubble);
-  }
-
-  /* thumbs up / down / hide feedback under an answer */
-  function addFeedback(bubble, query) {
-    const bar = document.createElement('div');
-    bar.className = 'fbbar';
-    bar.innerHTML = `<button class="fbtn up" title="Good answer">👍</button>`
-      + `<button class="fbtn down" title="Not great — push these lower next time">👎</button>`
-      + `<button class="fbtn hide" title="Wrong — never show these for similar questions">✕</button>`
-      + `<span class="fbmsg"></span>`;
-    bubble.appendChild(bar);
-    const msg = bar.querySelector('.fbmsg');
-    const shownNames = () => [...bubble.querySelectorAll('.answer .rn')]
-      .map(a => a.dataset.name).filter(Boolean);
-
-    async function send(action, btn) {
-      const objects = shownNames();
-      if (!objects.length && action !== 'up') { msg.textContent = 'nothing to act on'; return; }
-      bar.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      try {
-        const r = await fetch('/api/assistant/feedback', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: query, objects, action, author: (State.assistant && State.assistant.user) || '' }),
-        });
-        const res = await r.json();
-        if (res.ok) State.feedback = res.feedback || State.feedback;
-      } catch (e) { /* keep local */ }
-      if (action === 'up') { msg.textContent = 'thanks!'; }
-      else if (action === 'down') { msg.textContent = 'noted — ranked lower next time'; }
-      else if (action === 'hide') {
-        msg.textContent = 'hidden for similar questions';
-        // remove them from the current answer immediately
-        const ans = bubble.querySelector('.answer');
-        const kill = new Set(shownNames());
-        if (ans) ans.querySelectorAll('.arow').forEach(row => {
-          const a = row.querySelector('.rn');
-          if (a && kill.has(a.dataset.name)) {
-            const next = row.nextElementSibling;
-            if (next && next.classList.contains('cmtline')) next.remove();
-            row.remove();
-          }
-        });
-      }
-    }
-    bar.querySelector('.up').addEventListener('click', e => send('up', e.currentTarget));
-    bar.querySelector('.down').addEventListener('click', e => send('down', e.currentTarget));
-    bar.querySelector('.hide').addEventListener('click', e => send('hide', e.currentTarget));
   }
 
   /* ---- training: match, render, submit corrections ---- */
@@ -1441,6 +1466,7 @@ function renderResults(q, results, checking) {
       <span class="rc">${esc(o.category)}</span>
       ${r.codeConfirmed ? '<span class="ck" title="confirmed in FOX / ABAP code comments">✓ code</span>' : ''}
       <span class="rp${r.acc >= ACC_THRESHOLD ? ' hi' : ''}">${r.acc}%</span>
+      ${fbIcons(o.name)}
     </div>`
       + (r.codeConfirmed && r.snippet ? `<div class="cmtline">💬 ${esc(r.snippet)}</div>` : '');
   };
@@ -1493,7 +1519,46 @@ async function enrichWithComments(question, results, bubble) {
 }
 
 function rebindBubble(d) {
-  d.querySelectorAll('.open2').forEach(a => a.addEventListener('click', () => openObject(a.dataset.name)));
+  d.querySelectorAll('.open2').forEach(a => a.onclick = () => openObject(a.dataset.name));
+  const query = d.dataset.q || '';
+  d.querySelectorAll('.arow .fbtn').forEach(btn => {
+    btn.onclick = async () => {
+      const action = btn.dataset.a, name = btn.dataset.name;
+      if (!name) return;
+      const grp = btn.closest('.fbrow');
+      if (grp) grp.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      try {
+        const r = await fetch('/api/assistant/feedback', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: query, objects: [name], action, author: (State.assistant && State.assistant.user) || '' }),
+        });
+        const res = await r.json();
+        if (res.ok) State.feedback = res.feedback || State.feedback;
+      } catch (e) { /* keep local */ }
+      const row = btn.closest('.arow');
+      if (action === 'hide' && row) {
+        const next = row.nextElementSibling;
+        if (next && next.classList.contains('cmtline')) next.remove();
+        row.remove();
+      } else if (action === 'down' && row) {
+        const parent = row.parentElement, next = row.nextElementSibling;
+        row.classList.add('demoted');
+        if (next && next.classList.contains('cmtline')) parent.appendChild(next);
+        parent.appendChild(row);          // move to the bottom
+      }
+    };
+  });
+}
+
+/* inline per-object feedback icons */
+function fbIcons(name) {
+  const n = esc(name);
+  return `<span class="fbrow">`
+    + `<button class="fbtn up" data-a="up" data-name="${n}" title="Good">👍</button>`
+    + `<button class="fbtn down" data-a="down" data-name="${n}" title="Rank lower for similar questions">👎</button>`
+    + `<button class="fbtn hide" data-a="hide" data-name="${n}" title="Never show for similar questions">✕</button>`
+    + `</span>`;
 }
 
 /* live: query SAP MS1 directly (HTTP/ADT + OData catalog) and append results */
@@ -1530,8 +1595,8 @@ async function enrichWithLiveSap(query, results, bubble) {
     }
     const row = (name, type, desc, dom) =>
       `<div class="arow"><span class="dotd ${dom || 'abap'}"></span>`
-      + `<span class="rn" style="cursor:default">${esc(name)}</span>`
-      + `<span class="rc">${esc(type)}</span></div>`
+      + `<span class="rn open2" data-name="${esc(name)}">${esc(name)}</span>`
+      + `<span class="rc">${esc(type)}</span>${fbIcons(name)}</div>`
       + (desc ? `<div class="cmtline">${esc(desc)}</div>` : '');
     let html = `<div class="livehdr">🔎 Live from SAP MS1${scope}</div>`;
     objs.slice(0, 10).forEach(o => html += row(o.name, o.type + (o.package ? ' · ' + o.package : ''), o.description, 'abap'));
@@ -1540,10 +1605,100 @@ async function enrichWithLiveSap(query, results, bubble) {
       svcs.slice(0, 6).forEach(s => html += row(s.name, 'OData Service' + (s.version ? ' v' + s.version : ''), s.description, 'bw'));
     }
     live.innerHTML = html;
+    rebindBubble(bubble);
     bubble.parentElement && (bubble.parentElement.scrollTop = bubble.parentElement.scrollHeight);
   } catch (e) {
     live.innerHTML = `<div class="livehdr">🔎 SAP MS1 live search unavailable</div>`;
   }
+}
+
+/* ===================== ADMIN (usage metrics) ===================== */
+function initAdmin() {
+  // resolve admin key: ?admin=KEY (persist + clean URL) or localStorage
+  let key = '';
+  try {
+    const u = new URL(location.href);
+    const p = u.searchParams.get('admin');
+    if (p) { key = p; localStorage.setItem('pspe.adminKey', p);
+      u.searchParams.delete('admin'); history.replaceState({}, '', u.toString()); }
+    else key = localStorage.getItem('pspe.adminKey') || '';
+  } catch (e) {}
+  if (!key) return;                      // not an admin -> tab stays hidden
+  State.adminKey = key;
+  loadAdminMetrics().then(ok => {
+    if (!ok) { try { localStorage.removeItem('pspe.adminKey'); } catch (e) {} return; }
+    const tab = document.getElementById('tabAdmin');
+    if (tab) tab.style.display = '';
+    renderAdminKpisLists();
+    const rb = document.getElementById('admRefresh');
+    if (rb) rb.onclick = async () => { await loadAdminMetrics(); renderAdminKpisLists(); renderAdminCharts(); toast('Admin metrics refreshed'); };
+  });
+}
+
+async function loadAdminMetrics() {
+  try {
+    const r = await fetch('/api/admin/metrics?key=' + encodeURIComponent(State.adminKey || ''));
+    if (!r.ok) return false;
+    State.adminMetrics = await r.json();
+    return true;
+  } catch (e) { return false; }
+}
+
+function renderAdminKpisLists() {
+  const m = State.adminMetrics; if (!m) return;
+  const k = m.kpis || {};
+  setText('admGen', 'data as of ' + (m.generated || '—'));
+  const cards = [
+    ['Bot queries', k.queries, ''], ['Match rate', (k.match_rate || 0) + '%', 'ok'],
+    ['Avg clicks / week', k.avg_clicks_per_week, 'abap'],
+    ['Unique questions', k.unique_questions, ''], ['Live SAP searches', k.live_searches, 'abap'],
+    ['Teachings', k.teachings, 'bw'], ['Feedback given', k.feedback_total, 'warn'],
+    ['Drawer opens', k.drawer_opens, ''], ['Excel exports', k.exports, ''],
+    ['Refreshes', k.refreshes, ''], ['Unique users', k.unique_users, 'ok'],
+    ['Active days', k.active_days, ''], ['Total events', k.total_events, ''],
+  ];
+  document.getElementById('admKpis').innerHTML = cards.map(([l, v, c]) =>
+    `<div class="kpi ${c}"><div class="k-label">${l}</div><div class="k-val">${v ?? 0}</div></div>`).join('');
+
+  const liRow = (kk, vv) => `<div class="li"><span class="lk">${esc(kk)}</span><span class="lv">${esc(vv)}</span></div>`;
+  document.getElementById('admTopQ').innerHTML =
+    (m.top_questions || []).map(([q, n]) => liRow(q, n)).join('') || '<div class="muted">No queries yet.</div>';
+  document.getElementById('admTopT').innerHTML =
+    (m.top_teachers || []).map(([a, n]) => liRow(a || 'unknown', n)).join('') || '<div class="muted">No teachings yet.</div>';
+  const repo = m.repo || {};
+  document.getElementById('admMisc').innerHTML =
+    liRow('Custom objects', repo.custom || 0) + liRow('Process areas', repo.processAreas || 0)
+    + liRow('ABAP objects', (repo.byDomain || {}).ABAP || 0) + liRow('BW objects', (repo.byDomain || {}).BW || 0)
+    + (m.users || []).slice(0, 8).map(u => liRow('user: ' + u, '●')).join('');
+}
+
+function renderAdminCharts() {
+  const m = State.adminMetrics; if (!m) return;
+  const daily = m.queries_per_day || [];
+  makeChart('admDaily', { type: 'bar',
+    data: { labels: daily.map(d => d.day.slice(5)),
+      datasets: [{ data: daily.map(d => d.n), backgroundColor: '#4f8cff', borderRadius: 6 }] },
+    options: barOpts() });
+  const tabs = m.tab_views || {};
+  makeChart('admTabs', { type: 'doughnut',
+    data: { labels: Object.keys(tabs),
+      datasets: [{ data: Object.values(tabs),
+        backgroundColor: ['#4f8cff', '#22d3ee', '#f5b942', '#2dd4a7', '#f472b6'],
+        borderColor: '#0b1020', borderWidth: 2 }] },
+    options: doughnutOpts('right') });
+  const fb = m.feedback || {};
+  makeChart('admFb', { type: 'bar',
+    data: { labels: ['👍 up', '👎 down', '✕ hide'],
+      datasets: [{ data: [fb.up || 0, fb.down || 0, fb.hide || 0],
+        backgroundColor: ['#2dd4a7', '#f5b942', '#ff6b81'], borderRadius: 6 }] },
+    options: barOpts() });
+  const wk = m.clicks_per_week || [];
+  makeChart('admClicks', { type: 'line',
+    data: { labels: wk.map(w => w.week),
+      datasets: [{ data: wk.map(w => w.n), label: 'clicks',
+        borderColor: '#4f8cff', backgroundColor: 'rgba(79,140,255,.15)',
+        fill: true, tension: 0.3, pointRadius: 3 }] },
+    options: barOpts() });
 }
 
 boot();

@@ -195,8 +195,21 @@ def api_sap_whereused():
     if not names:
         return jsonify({"edges": [], "source": "none"})
     try:
-        edges = sap_connect.where_used(names)
-        return jsonify({"edges": edges, "source": "live" if edges else "empty"})
+        # RFC path when the SDK is available
+        if sap_connect.pyrfc_available() and sap_connect.is_configured():
+            edges = sap_connect.where_used(names)
+            return jsonify({"edges": edges, "source": "live" if edges else "empty"})
+        # SDK-free HTTP/ADT where-used (usageReferences)
+        if sap_http.is_configured():
+            edges, seen = [], set()
+            for nm in names[:15]:
+                for e in sap_http.where_used(nm):
+                    key = (e["source"], e["target"])
+                    if key not in seen:
+                        seen.add(key)
+                        edges.append(e)
+            return jsonify({"edges": edges, "source": "live" if edges else "empty"})
+        return jsonify({"edges": [], "source": "offline"})
     except Exception as e:  # unreachable / not installed -> graceful empty
         app.logger.warning("where_used failed: %s", e)
         return jsonify({"edges": [], "source": "error", "error": str(e)})
@@ -334,6 +347,7 @@ def api_assistant_teach():
                  or i.get("object", "").upper() != obj.upper()]
         items.insert(0, entry)
         _save_corrections(items[:1000])
+    _track("teach", author=entry.get("author"))
     return jsonify({"ok": True, "teaching": entry, "shared": _corr_is_shared()})
 
 
@@ -421,7 +435,182 @@ def api_assistant_feedback():
                     "ts": _time.strftime("%Y-%m-%d %H:%M:%S"),
                 })
         _save_feedback(items[:3000])
+    _track("feedback", action=action, n=len(objs),
+           author=(payload.get("author") or "").strip())
     return jsonify({"ok": True, "feedback": items})
+
+
+# --------------------------------------------------------------------------- #
+# Usage tracking + Admin metrics (admin-only)
+# --------------------------------------------------------------------------- #
+import secrets as _secrets
+
+USAGE_FILE = os.environ.get("PSPE_USAGE_FILE") or os.path.join(
+    os.path.dirname(CORR_FILE), "usage.jsonl")
+ADMIN_CFG = os.path.join(HERE, "admin_config.json")
+
+
+def _admin_key():
+    """Effective admin key: env var wins, else a persisted random key."""
+    k = os.environ.get("PSPE_ADMIN_KEY")
+    if k:
+        return k
+    try:
+        with open(ADMIN_CFG, "r", encoding="utf-8") as fh:
+            return (json.load(fh) or {}).get("admin_key") or ""
+    except Exception:
+        return ""
+
+
+def _ensure_admin_key():
+    """Create a random admin key on first run and print the unlock URL."""
+    if os.environ.get("PSPE_ADMIN_KEY") or _admin_key():
+        return _admin_key()
+    key = _secrets.token_urlsafe(10)
+    try:
+        with open(ADMIN_CFG, "w", encoding="utf-8") as fh:
+            json.dump({"admin_key": key}, fh, indent=1)
+        os.chmod(ADMIN_CFG, 0o600)
+    except Exception:
+        pass
+    print("\n  ADMIN metrics unlock (keep private):")
+    print(f"    http://127.0.0.1:5000/?admin={key}\n")
+    return key
+
+
+def _track(ev_type, **fields):
+    """Append a usage event (JSONL, append-only, best effort)."""
+    import time as _time
+    try:
+        os.makedirs(os.path.dirname(USAGE_FILE) or ".", exist_ok=True)
+        rec = {"ts": _time.strftime("%Y-%m-%d %H:%M:%S"), "type": ev_type}
+        rec.update({k: v for k, v in fields.items() if v is not None})
+        with open(USAGE_FILE, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def _iso_week(ts):
+    """'YYYY-MM-DD ...' -> 'YYYY-Wnn' ISO week label."""
+    try:
+        import datetime as _dt
+        d = _dt.datetime.strptime((ts or "")[:10], "%Y-%m-%d").date()
+        y, w, _ = d.isocalendar()
+        return f"{y}-W{w:02d}"
+    except Exception:
+        return ""
+
+
+def _load_usage(limit=50000):
+    try:
+        with open(USAGE_FILE, "r", encoding="utf-8") as fh:
+            lines = fh.readlines()[-limit:]
+    except Exception:
+        return []
+    out = []
+    for ln in lines:
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            out.append(json.loads(ln))
+        except Exception:
+            pass
+    return out
+
+
+def _is_admin(req):
+    key = req.args.get("key") or req.headers.get("X-Admin-Key") or ""
+    admin = _admin_key()
+    return bool(admin) and key == admin
+
+
+@app.route("/api/track", methods=["POST"])
+def api_track():
+    """Record a front-end usage event (query, tab view, drawer, export…)."""
+    p = request.get_json(silent=True) or {}
+    t = (p.get("type") or "").strip()
+    if not t:
+        return jsonify({"ok": False}), 400
+    allow = {"q", "view", "proc", "matched", "topAcc", "user", "live", "source"}
+    _track(t, **{k: p.get(k) for k in allow if k in p})
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/status")
+def api_admin_status():
+    """Whether the caller is the admin (holds the key). No secrets leaked."""
+    return jsonify({"admin": _is_admin(request)})
+
+
+@app.route("/api/admin/metrics")
+def api_admin_metrics():
+    """Aggregated usage metrics — admin key required."""
+    if not _is_admin(request):
+        return jsonify({"error": "unauthorized"}), 401
+    from collections import Counter
+    ev = _load_usage()
+    q = [e for e in ev if e.get("type") == "query"]
+    tabs = Counter(e.get("view") for e in ev if e.get("type") == "tab" and e.get("view"))
+    fb = Counter(e.get("action") for e in ev if e.get("type") == "feedback" and e.get("action"))
+    users = sorted({e.get("user") for e in ev if e.get("user")})
+    day = Counter((e.get("ts") or "")[:10] for e in q if e.get("ts"))
+    qtext = Counter((e.get("q") or "").strip() for e in q if (e.get("q") or "").strip())
+    matched = sum(1 for e in q if e.get("matched"))
+    live = sum(1 for e in ev if e.get("type") == "live_search")
+    teach = _load_corrections()
+    authors = Counter((t.get("author") or "unknown") for t in teach)
+    data = load_or_build()
+    stats = data.get("stats", {})
+    counts = Counter(e.get("type") for e in ev)
+
+    # ---- footfall: clicks per ISO week ----
+    interactive = {"query", "tab", "drawer", "export", "feedback",
+                   "live_search", "refresh", "click", "visit"}
+    week = Counter()
+    for e in ev:
+        if e.get("type") not in interactive:
+            continue
+        n = e.get("n") or 1
+        wk = _iso_week(e.get("ts"))
+        if wk:
+            week[wk] += n
+    weeks_sorted = sorted(week.items())
+    total_clicks = sum(week.values())
+    avg_clicks_week = round(total_clicks / len(week)) if week else 0
+
+    return jsonify({
+        "kpis": {
+            "queries": len(q),
+            "unique_questions": len(qtext),
+            "match_rate": round(matched / len(q) * 100) if q else 0,
+            "avg_clicks_per_week": avg_clicks_week,
+            "live_searches": live,
+            "drawer_opens": counts.get("drawer", 0),
+            "exports": counts.get("export", 0),
+            "refreshes": counts.get("refresh", 0),
+            "teachings": len(teach),
+            "feedback_total": sum(fb.values()),
+            "unique_users": len(users),
+            "active_days": len(day),
+            "total_events": len(ev),
+        },
+        "queries_per_day": [{"day": d, "n": n} for d, n in sorted(day.items())][-21:],
+        "clicks_per_week": [{"week": w, "n": n} for w, n in weeks_sorted][-12:],
+        "top_questions": qtext.most_common(10),
+        "tab_views": dict(tabs),
+        "feedback": {"up": fb.get("up", 0), "down": fb.get("down", 0), "hide": fb.get("hide", 0)},
+        "top_teachers": authors.most_common(8),
+        "users": users,
+        "repo": {
+            "objects": stats.get("total", 0),
+            "custom": stats.get("custom", 0),
+            "byDomain": stats.get("byDomain", {}),
+            "processAreas": len(data.get("processAreas", [])),
+        },
+        "generated": data.get("generated", ""),
+    })
 
 
 @app.route("/api/assistant/llm", methods=["GET"])
@@ -479,6 +668,7 @@ def api_assistant_sapsearch():
     payload = request.get_json(silent=True) or {}
     query = payload.get("query") or ""
     names = payload.get("names") or []
+    _track("live_search")
     try:
         if sap_http.is_configured():
             return jsonify(sap_http.live_search(query, names))
@@ -490,6 +680,7 @@ def api_assistant_sapsearch():
 
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
+    _track("refresh")
     # 1. try live SAP MS1
     note = None
     try:
@@ -518,5 +709,6 @@ def api_refresh():
 if __name__ == "__main__":
     if not os.path.exists(os.path.join(HERE, "data.json")):
         build_data.build()
+    _ensure_admin_key()
     print("PS Process Explorer  ->  http://127.0.0.1:5000")
     app.run(host="127.0.0.1", port=5000, debug=False)

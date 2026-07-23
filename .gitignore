@@ -9,6 +9,8 @@ data.json
 data.js
 corrections.json
 feedback.json
+usage.jsonl
+admin_config.json
 
 # --- Python ---
 __pycache__/
