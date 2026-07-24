@@ -294,6 +294,29 @@ tbody tr:hover{background:var(--panel2)}
 .mermaid-host{display:inline-block;min-width:100%;padding:18px;transform-origin:top left}
 .mermaid-host svg{display:block}
 .mermaid-host .empty{padding:40px}
+/* object selector (top-right checklist to include/exclude diagram nodes) */
+.map-wrap{position:relative}
+.objsel{position:absolute;top:12px;right:12px;z-index:8;width:236px;
+  background:rgba(12,18,36,.95);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 14px 34px rgba(0,0,0,.5);overflow:hidden}
+.objsel-head{display:flex;align-items:center;gap:6px;padding:8px 10px;
+  border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text)}
+.objsel-head span{flex:1}
+.objsel-head button{background:var(--panel2);border:1px solid var(--border);border-radius:6px;
+  color:var(--muted);font-size:10.5px;padding:2px 7px;cursor:pointer}
+.objsel-head button:hover{color:var(--text);border-color:var(--accent)}
+.objsel-list{max-height:320px;overflow:auto;padding:6px;scrollbar-width:thin}
+.objsel.collapsed .objsel-list{display:none}
+.objsel-opt{display:flex;align-items:center;gap:7px;padding:3px 5px;border-radius:6px;
+  font-size:11.5px;cursor:pointer;color:var(--text);
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+.objsel-opt:hover{background:var(--panel2)}
+.objsel-opt i{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+.objsel-opt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.objsel-opt input{accent-color:var(--accent);flex:0 0 auto;cursor:pointer}
+.objsel-empty{color:var(--muted);font-size:11.5px;padding:8px 6px}
+.objsel-drw{top:50px;width:210px}
+.objsel-drw .objsel-list{max-height:220px}
 .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
@@ -538,7 +561,18 @@ tbody tr:hover{background:var(--panel2)}
       <button class="btn" id="graphPdf" title="Export the map to PDF">⬇ PDF</button>
       <span class="muted" id="graphInfo" style="margin-left:auto"></span>
     </div>
-    <div id="depScroll" class="graph-scroll"><div id="depMermaid" class="mermaid-host"></div></div>
+    <div class="map-wrap">
+      <div id="depScroll" class="graph-scroll"><div id="depMermaid" class="mermaid-host"></div></div>
+      <div class="objsel" id="depObjSel">
+        <div class="objsel-head">
+          <span>🎛️ Objects</span>
+          <button type="button" data-a="all">All</button>
+          <button type="button" data-a="none">None</button>
+          <button type="button" class="objsel-x" data-a="toggle">▾</button>
+        </div>
+        <div class="objsel-list" id="depObjList"></div>
+      </div>
+    </div>
     <div class="legend">
       <span><i style="background:#4f8cff"></i> Planning Sequence</span>
       <span><i style="background:#f5b942"></i> Planning Function</span>
@@ -683,6 +717,15 @@ tbody tr:hover{background:var(--panel2)}
           <button class="gbtn" id="dgWhereUsed" title="Trace live call logic from SAP MS1 (ABAP → dependent BW / ABAP objects)" style="width:auto;padding:0 8px;display:none">🔗 Trace call logic</button>
           <button class="gbtn" id="dgPdf" title="Export this flow map to PDF" style="width:auto;padding:0 8px">⬇ PDF</button>
           <span class="gbadge" id="dgInfo"></span>
+        </div>
+        <div class="objsel objsel-drw" id="drwObjSel">
+          <div class="objsel-head">
+            <span>🎛️ Objects</span>
+            <button type="button" data-a="all">All</button>
+            <button type="button" data-a="none">None</button>
+            <button type="button" class="objsel-x" data-a="toggle">▾</button>
+          </div>
+          <div class="objsel-list" id="drwObjList"></div>
         </div>
         <div id="drawerGraph"></div>
         <div class="glegend">

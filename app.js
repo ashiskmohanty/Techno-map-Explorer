@@ -17,6 +17,10 @@ const State = {
   custSearch: '',
   custLocalOnly: false, // Custom Objects: show only local-file objects (hide live SAP)
   isAdmin: false,    // admin key verified -> unlock Edit actions
+  depBase: null,     // dependency map: current {nodes,edges,src,root}
+  depHidden: null,   // dependency map: Set of node names hidden by the selector
+  drwBase: null,     // drawer flow map: current {nodes,edges}
+  drwHidden: null,   // drawer flow map: Set of hidden node names
   l1Filter: null,    // selected Level-1 process area (drill-down)
   sapConnected: false, // green header dot when a live SAP link exists
   teachings: [],     // user corrections that train the assistant
@@ -977,6 +981,7 @@ async function renderDrawerGraph(procName, objs) {
   const container = document.getElementById('drawerGraph');
   if (State.drawerCy) { State.drawerCy.destroy(); State.drawerCy = null; }
   _drwZoom = 1;
+  State.drwProc = procName; State.drwObjs = objs;
   const info = document.getElementById('dgInfo');
   const connected = State.sapConnected || (State.assistant && State.assistant.searchMs1);
 
@@ -993,35 +998,66 @@ async function renderDrawerGraph(procName, objs) {
   if (pdfBtn) pdfBtn.onclick = () =>
     exportMapPdf(document.querySelector('#drawerGraph svg'), 'flowmap_' + _safeName(procName) + '.pdf');
 
+  // zoom / reset / selector tools
+  const host = () => container.querySelector('.mermaid-host');
+  const zin = document.getElementById('dgZoomIn');
+  const zout = document.getElementById('dgZoomOut');
+  const fit = document.getElementById('dgFit');
+  const reset = document.getElementById('dgReset');
+  if (zin) zin.onclick = () => { _drwZoom = Math.min(3, _drwZoom * 1.2); _sizeMermaidSvg(host(), _drwZoom); };
+  if (zout) zout.onclick = () => { _drwZoom = Math.max(0.3, _drwZoom / 1.2); _sizeMermaidSvg(host(), _drwZoom); };
+  if (fit) fit.onclick = () => { _drwZoom = 1; _sizeMermaidSvg(host(), _drwZoom); };
+  if (reset) reset.onclick = () => renderDrawerGraph(procName, objs);
+  const sel = document.getElementById('drwObjSel');
+  if (sel) {
+    sel.querySelector('[data-a="all"]').onclick = () => { State.drwHidden = new Set(); paintDrawer(); };
+    sel.querySelector('[data-a="none"]').onclick = () => { State.drwHidden = new Set((State.drwBase && State.drwBase.nodes) || []); paintDrawer(); };
+    sel.querySelector('[data-a="toggle"]').onclick = e => { sel.classList.toggle('collapsed'); e.target.textContent = sel.classList.contains('collapsed') ? '▸' : '▾'; };
+  }
+
   if (!edges.length) {
     if (connected && objs.length) { nodes = objs.map(o => o.name); nodesOnly = true; }
     else {
       container.innerHTML = '<div class="empty">No linked dependencies for this process — see the object hierarchy above.</div>';
       if (info) info.textContent = '';
+      State.drwBase = null;
+      renderObjSelector(document.getElementById('drwObjList'), [], new Set(), () => {});
       return;
     }
   }
 
-  await _renderMermaidInto(container, nodes, edges, _drwZoom);
+  State.drwBase = { nodes, edges, src: 'local', nodesOnly };
+  State.drwHidden = new Set();
+  await paintDrawer();
+}
 
-  // zoom / reset tools drive the SVG size (so the scroll area reflects zoom)
-  const zin = document.getElementById('dgZoomIn');
-  const zout = document.getElementById('dgZoomOut');
-  const fit = document.getElementById('dgFit');
-  const reset = document.getElementById('dgReset');
-  const host = () => container.querySelector('.mermaid-host');
-  if (zin) zin.onclick = () => { _drwZoom = Math.min(3, _drwZoom * 1.2); _sizeMermaidSvg(host(), _drwZoom); };
-  if (zout) zout.onclick = () => { _drwZoom = Math.max(0.3, _drwZoom / 1.2); _sizeMermaidSvg(host(), _drwZoom); };
-  if (fit) fit.onclick = () => { _drwZoom = 1; _sizeMermaidSvg(host(), _drwZoom); };
-  if (reset) reset.onclick = () => renderDrawerGraph(procName, objs);
-  const pdf = document.getElementById('dgPdf');
-  if (pdf) pdf.onclick = () =>
-    exportMapPdf(document.querySelector('#drawerGraph svg'), 'flowmap_' + _safeName(procName) + '.pdf');
+/* filter the drawer base by the selector, render Mermaid + the checklist */
+async function paintDrawer() {
+  const container = document.getElementById('drawerGraph');
+  const info = document.getElementById('dgInfo');
+  const base = State.drwBase;
+  if (!container) return;
+  const hidden = State.drwHidden || (State.drwHidden = new Set());
+  renderObjSelector(document.getElementById('drwObjList'), (base && base.nodes) || [], hidden, paintDrawer);
+  if (!base || !base.nodes.length) { container.innerHTML = '<div class="empty">No dependencies.</div>'; if (info) info.textContent = ''; return; }
 
+  const vis = base.nodes.filter(n => !hidden.has(n));
+  const edges = base.edges.filter(e => !hidden.has(e.source) && !hidden.has(e.target));
+  if (!vis.length) {
+    container.innerHTML = '<div class="empty">All objects deselected — tick objects on the right to show them.</div>';
+    if (info) info.textContent = `0 / ${base.nodes.length} nodes`;
+    return;
+  }
+  await _renderMermaidInto(container, vis, edges, _drwZoom);
+  const byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
+  const bwCount = vis.filter(n => (byName[n] || {}).domain === 'BW').length;
   if (info) {
-    info.textContent = nodesOnly
-      ? `${nodes.length} objects · click 🔗 Trace call logic for live MS1 dependencies`
-      : `${nodes.length} nodes · ${edges.length} links` + (connected ? ' · 🔗 Trace call logic for live MS1 links' : '');
+    if (base.nodesOnly) {
+      info.textContent = `${vis.length} objects · click 🔗 Trace call logic for live MS1 dependencies`;
+    } else {
+      info.textContent = `${vis.length} / ${base.nodes.length} nodes · ${edges.length} links` +
+        (base.src === 'live' ? ` · live call logic · ${bwCount} BW` : '');
+    }
   }
 }
 
@@ -1071,11 +1107,12 @@ async function traceDependencies(procName, objs) {
     if (!edges.length) {
       container.innerHTML = '<div class="empty">No live call-logic references found for these objects in MS1.</div>';
       if (info) info.textContent = '';
+      State.drwBase = null;
+      renderObjSelector(document.getElementById('drwObjList'), [], new Set(), () => {});
     } else {
-      await _renderMermaidInto(container, [...nodes], edges, _drwZoom);
-      const bwCount = [...nodes].filter(n => (byName[n] || {}).domain === 'BW').length;
-      if (info) info.textContent =
-        `${nodes.size} nodes · ${edges.length} links · live call logic · ${bwCount} BW object${bwCount !== 1 ? 's' : ''}`;
+      State.drwBase = { nodes: [...nodes], edges, src: 'live', nodesOnly: false };
+      State.drwHidden = new Set();
+      await paintDrawer();
     }
   } catch (e) {
     if (info) info.textContent = 'SAP trace unavailable (check ⚙ connection)';
@@ -1138,6 +1175,25 @@ async function exportMapPdf(svg, filename) {
 }
 
 function _safeName(s) { return (s || 'map').replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 60); }
+
+/* render the top-right object checklist; toggling include/exclude re-paints */
+function renderObjSelector(listEl, allNodes, hiddenSet, onChange) {
+  if (!listEl) return;
+  const byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
+  const nodes = allNodes.slice().sort();
+  if (!nodes.length) { listEl.innerHTML = '<div class="objsel-empty">No objects</div>'; return; }
+  listEl.innerHTML = nodes.map(n => {
+    const color = nodeColor((byName[n] || {}).category);
+    const on = !hiddenSet.has(n) ? 'checked' : '';
+    return `<label class="objsel-opt" title="${esc(n)}">
+      <input type="checkbox" value="${esc(n)}" ${on}/>
+      <i style="background:${color}"></i><span>${esc(n)}</span></label>`;
+  }).join('');
+  listEl.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) hiddenSet.delete(cb.value); else hiddenSet.add(cb.value);
+    onChange();
+  }));
+}
 
 /* undirected adjacency of the whole dependency graph */
 function depAdjacency() {
@@ -1232,7 +1288,9 @@ async function drawDepMermaid(live = false) {
   if (!host) return;
   if (!root) {
     host.innerHTML = '<div class="empty">No connected dependencies to display for this selection.</div>';
-    info.textContent = ''; return;
+    info.textContent = '';
+    State.depBase = null; renderObjSelector(document.getElementById('depObjList'), [], new Set(), () => {});
+    return;
   }
   let nodes = null, edges = null, src = 'local';
   if (live && State.sapConnected) {
@@ -1258,11 +1316,29 @@ async function drawDepMermaid(live = false) {
   }
   if (!nodes) { const sg = depSubgraph(root); nodes = sg.nodes; edges = sg.edges; }
 
-  if (!edges.length) {
-    host.innerHTML = `<div class="empty">${esc(root)} has no mapped dependencies.</div>`;
-    info.textContent = `0 links · root: ${root}`; return;
+  // new base -> reset the object selection
+  State.depBase = { nodes, edges, src, root };
+  State.depHidden = new Set();
+  await paintDep();
+}
+
+/* filter the current base by the selector, render Mermaid + the checklist */
+async function paintDep() {
+  const host = document.getElementById('depMermaid');
+  const info = document.getElementById('graphInfo');
+  const base = State.depBase;
+  if (!host || !base) return;
+  const hidden = State.depHidden || (State.depHidden = new Set());
+  renderObjSelector(document.getElementById('depObjList'), base.nodes, hidden, paintDep);
+
+  const vis = base.nodes.filter(n => !hidden.has(n));
+  const edges = base.edges.filter(e => !hidden.has(e.source) && !hidden.has(e.target));
+  if (!vis.length) {
+    host.innerHTML = '<div class="empty">All objects deselected — tick objects on the right to show them.</div>';
+    info.textContent = `0 / ${base.nodes.length} nodes · root: ${base.root}`;
+    return;
   }
-  const code = depMermaidText(nodes, edges);
+  const code = depMermaidText(vis, edges);
   try {
     const { svg } = await mermaid.render('depSvg' + Date.now(), code);
     host.innerHTML = svg;
@@ -1280,7 +1356,7 @@ async function drawDepMermaid(live = false) {
   } catch (e) {
     host.innerHTML = '<div class="empty">Could not render the dependency diagram.</div>';
   }
-  info.textContent = `${nodes.length} nodes · ${edges.length} links · ${src} · root: ${root}`;
+  info.textContent = `${vis.length} / ${base.nodes.length} nodes · ${edges.length} links · ${base.src} · root: ${base.root}`;
 }
 
 function renderDepGraph() {
@@ -1320,6 +1396,12 @@ function renderDepGraph() {
   if (pdfBtn) pdfBtn.onclick = () =>
     exportMapPdf(document.querySelector('#depMermaid svg'),
       'dependency-map_' + _safeName(document.getElementById('graphRoot').value) + '.pdf');
+  const sel = document.getElementById('depObjSel');
+  if (sel) {
+    sel.querySelector('[data-a="all"]').onclick = () => { State.depHidden = new Set(); paintDep(); };
+    sel.querySelector('[data-a="none"]').onclick = () => { State.depHidden = new Set((State.depBase && State.depBase.nodes) || []); paintDep(); };
+    sel.querySelector('[data-a="toggle"]').onclick = e => { sel.classList.toggle('collapsed'); e.target.textContent = sel.classList.contains('collapsed') ? '▸' : '▾'; };
+  }
   drawDepMermaid();
 }
 
