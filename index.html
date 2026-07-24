@@ -313,6 +313,7 @@ tbody tr:hover{background:var(--panel2)}
 .objsel-opt:hover{background:var(--panel2)}
 .objsel-opt i{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
 .objsel-opt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.objsel-opt .objsel-cnt{margin-left:auto;color:var(--muted);font-size:10.5px;flex:0 0 auto}
 .objsel-opt input{accent-color:var(--accent);flex:0 0 auto;cursor:pointer}
 .objsel-empty{color:var(--muted);font-size:11.5px;padding:8px 6px}
 .objsel-drw{top:50px;width:210px}
@@ -565,7 +566,7 @@ tbody tr:hover{background:var(--panel2)}
       <div id="depScroll" class="graph-scroll"><div id="depMermaid" class="mermaid-host"></div></div>
       <div class="objsel" id="depObjSel">
         <div class="objsel-head">
-          <span>🎛️ Objects</span>
+          <span>🎛️ Category</span>
           <button type="button" data-a="all">All</button>
           <button type="button" data-a="none">None</button>
           <button type="button" class="objsel-x" data-a="toggle">▾</button>
@@ -720,7 +721,7 @@ tbody tr:hover{background:var(--panel2)}
         </div>
         <div class="objsel objsel-drw" id="drwObjSel">
           <div class="objsel-head">
-            <span>🎛️ Objects</span>
+            <span>🎛️ Category</span>
             <button type="button" data-a="all">All</button>
             <button type="button" data-a="none">None</button>
             <button type="button" class="objsel-x" data-a="toggle">▾</button>

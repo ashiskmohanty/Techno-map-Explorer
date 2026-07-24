@@ -1011,7 +1011,7 @@ async function renderDrawerGraph(procName, objs) {
   const sel = document.getElementById('drwObjSel');
   if (sel) {
     sel.querySelector('[data-a="all"]').onclick = () => { State.drwHidden = new Set(); paintDrawer(); };
-    sel.querySelector('[data-a="none"]').onclick = () => { State.drwHidden = new Set((State.drwBase && State.drwBase.nodes) || []); paintDrawer(); };
+    sel.querySelector('[data-a="none"]').onclick = () => { State.drwHidden = new Set(catsOfNodes((State.drwBase && State.drwBase.nodes) || [])); paintDrawer(); };
     sel.querySelector('[data-a="toggle"]').onclick = e => { sel.classList.toggle('collapsed'); e.target.textContent = sel.classList.contains('collapsed') ? '▸' : '▾'; };
   }
 
@@ -1041,10 +1041,11 @@ async function paintDrawer() {
   renderObjSelector(document.getElementById('drwObjList'), (base && base.nodes) || [], hidden, paintDrawer);
   if (!base || !base.nodes.length) { container.innerHTML = '<div class="empty">No dependencies.</div>'; if (info) info.textContent = ''; return; }
 
-  const vis = base.nodes.filter(n => !hidden.has(n));
-  const edges = base.edges.filter(e => !hidden.has(e.source) && !hidden.has(e.target));
+  const vis = base.nodes.filter(n => !hidden.has(_catOf(n)));
+  const visSet = new Set(vis);
+  const edges = base.edges.filter(e => visSet.has(e.source) && visSet.has(e.target));
   if (!vis.length) {
-    container.innerHTML = '<div class="empty">All objects deselected — tick objects on the right to show them.</div>';
+    container.innerHTML = '<div class="empty">All categories deselected — tick a category on the right to show it.</div>';
     if (info) info.textContent = `0 / ${base.nodes.length} nodes`;
     return;
   }
@@ -1176,21 +1177,35 @@ async function exportMapPdf(svg, filename) {
 
 function _safeName(s) { return (s || 'map').replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 60); }
 
-/* render the top-right object checklist; toggling include/exclude re-paints */
-function renderObjSelector(listEl, allNodes, hiddenSet, onChange) {
+/* category of a node (falls back to 'Other' for unknown live targets) */
+function _catOf(name) { return (State._byName && State._byName[name] || {}).category || 'Other'; }
+
+/* distinct categories present in a node list */
+function catsOfNodes(nodes) {
+  State._byName = State._byName || Object.fromEntries(State.objects.map(o => [o.name, o]));
+  const set = new Set();
+  nodes.forEach(n => set.add(_catOf(n)));
+  return [...set];
+}
+
+/* render the top-right OBJECT CATEGORY checklist; toggling a category
+   shows/hides all objects of that category and re-paints the diagram */
+function renderObjSelector(listEl, allNodes, hiddenCats, onChange) {
   if (!listEl) return;
-  const byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
-  const nodes = allNodes.slice().sort();
-  if (!nodes.length) { listEl.innerHTML = '<div class="objsel-empty">No objects</div>'; return; }
-  listEl.innerHTML = nodes.map(n => {
-    const color = nodeColor((byName[n] || {}).category);
-    const on = !hiddenSet.has(n) ? 'checked' : '';
-    return `<label class="objsel-opt" title="${esc(n)}">
-      <input type="checkbox" value="${esc(n)}" ${on}/>
-      <i style="background:${color}"></i><span>${esc(n)}</span></label>`;
+  State._byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
+  const counts = {};
+  allNodes.forEach(n => { const c = _catOf(n); counts[c] = (counts[c] || 0) + 1; });
+  const cats = Object.keys(counts).sort();
+  if (!cats.length) { listEl.innerHTML = '<div class="objsel-empty">No objects</div>'; return; }
+  listEl.innerHTML = cats.map(c => {
+    const color = nodeColor(c);
+    const on = !hiddenCats.has(c) ? 'checked' : '';
+    return `<label class="objsel-opt" title="${esc(c)}">
+      <input type="checkbox" value="${esc(c)}" ${on}/>
+      <i style="background:${color}"></i><span>${esc(c)}</span><span class="objsel-cnt">${counts[c]}</span></label>`;
   }).join('');
   listEl.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
-    if (cb.checked) hiddenSet.delete(cb.value); else hiddenSet.add(cb.value);
+    if (cb.checked) hiddenCats.delete(cb.value); else hiddenCats.add(cb.value);
     onChange();
   }));
 }
@@ -1280,6 +1295,43 @@ function setDepZoom(z) {
   svg.style.height = (parseFloat(svg.dataset.bh) * _depZoom) + 'px';
 }
 
+/* fetch a live dependency graph for a root from SAP MS1: outgoing call logic
+   (ABAP source scan via /api/sap/uses) + incoming where-used. Returns null when
+   nothing came back so the caller can fall back to the local map. */
+async function fetchLiveGraph(root) {
+  State._byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
+  const isAbap = (State._byName[root] || {}).domain === 'ABAP';
+  const nodes = new Set([root]);
+  const edges = []; const seen = new Set();
+  const push = (s, t) => {
+    if (!s || !t || s === t) return;
+    const k = s + '>' + t; if (seen.has(k)) return; seen.add(k);
+    nodes.add(s); nodes.add(t); edges.push({ source: s, target: t });
+  };
+  const candidates = State.objects.filter(o => o.custom).map(o => o.name);
+  // outgoing "uses" (works for ABAP: reads the source and matches references)
+  if (isAbap) {
+    try {
+      const r = await fetch('/api/sap/uses', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: [root], candidates }),
+      });
+      const res = await r.json();
+      (res.edges || []).forEach(e => push(e.source, e.target));
+    } catch (e) { /* ignore */ }
+  }
+  // incoming where-used (who references the root)
+  try {
+    const r = await fetch('/api/sap/whereused', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ names: [root] }),
+    });
+    const res = await r.json();
+    (res.edges || []).forEach(e => push(e.source, e.target));
+  } catch (e) { /* ignore */ }
+  return edges.length ? { nodes: [...nodes], edges, src: 'live MS1' } : null;
+}
+
 async function drawDepMermaid(live = false) {
   _initMermaid();
   const host = document.getElementById('depMermaid');
@@ -1293,26 +1345,11 @@ async function drawDepMermaid(live = false) {
     return;
   }
   let nodes = null, edges = null, src = 'local';
-  if (live && State.sapConnected) {
-    info.textContent = 'Fetching live where-used from SAP MS1…';
-    try {
-      const r = await fetch('/api/sap/whereused', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ names: [root] }),
-      });
-      const res = await r.json();
-      if (res.edges && res.edges.length) {
-        const nset = new Set([root]);
-        res.edges.forEach(e => { nset.add(e.source); nset.add(e.target); });
-        nodes = [...nset];
-        edges = res.edges.map(e => ({ source: e.source, target: e.target }));
-        src = 'live MS1';
-      } else {
-        toast('No live where-used returned by MS1 — showing the local map.', true);
-      }
-    } catch (e) {
-      toast('Live MS1 fetch failed — showing the local map.', true);
-    }
+  if (live && isLive()) {
+    info.textContent = 'Fetching live dependencies from SAP MS1…';
+    const g = await fetchLiveGraph(root);
+    if (g) { nodes = g.nodes; edges = g.edges; src = g.src; }
+    else { toast('No live dependencies returned by MS1 for this object — showing the local map.', true); }
   }
   if (!nodes) { const sg = depSubgraph(root); nodes = sg.nodes; edges = sg.edges; }
 
@@ -1331,10 +1368,11 @@ async function paintDep() {
   const hidden = State.depHidden || (State.depHidden = new Set());
   renderObjSelector(document.getElementById('depObjList'), base.nodes, hidden, paintDep);
 
-  const vis = base.nodes.filter(n => !hidden.has(n));
-  const edges = base.edges.filter(e => !hidden.has(e.source) && !hidden.has(e.target));
+  const vis = base.nodes.filter(n => !hidden.has(_catOf(n)));
+  const visSet = new Set(vis);
+  const edges = base.edges.filter(e => visSet.has(e.source) && visSet.has(e.target));
   if (!vis.length) {
-    host.innerHTML = '<div class="empty">All objects deselected — tick objects on the right to show them.</div>';
+    host.innerHTML = '<div class="empty">All categories deselected — tick a category on the right to show it.</div>';
     info.textContent = `0 / ${base.nodes.length} nodes · root: ${base.root}`;
     return;
   }
@@ -1399,7 +1437,7 @@ function renderDepGraph() {
   const sel = document.getElementById('depObjSel');
   if (sel) {
     sel.querySelector('[data-a="all"]').onclick = () => { State.depHidden = new Set(); paintDep(); };
-    sel.querySelector('[data-a="none"]').onclick = () => { State.depHidden = new Set((State.depBase && State.depBase.nodes) || []); paintDep(); };
+    sel.querySelector('[data-a="none"]').onclick = () => { State.depHidden = new Set(catsOfNodes((State.depBase && State.depBase.nodes) || [])); paintDep(); };
     sel.querySelector('[data-a="toggle"]').onclick = e => { sel.classList.toggle('collapsed'); e.target.textContent = sel.classList.contains('collapsed') ? '▸' : '▾'; };
   }
   drawDepMermaid();
