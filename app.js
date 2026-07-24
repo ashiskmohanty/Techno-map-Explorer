@@ -27,9 +27,26 @@ const State = {
 /* single source of truth for the header connection dot */
 function setConnDot() {
   const dot = document.getElementById('connDot');
-  if (!dot) return;
-  const live = (State.data && State.data.source === 'live') || State.sapConnected;
-  dot.classList.toggle('offline', !live);
+  const live = isLive();
+  if (dot) dot.classList.toggle('offline', !live);
+  updateDepLiveBtn();
+}
+
+/* true when SAP MS1 is reachable (verified test) or the data came in live */
+function isLive() {
+  return !!((State.data && State.data.source === 'live') || State.sapConnected);
+}
+
+/* keep the Dependency Map "Live MS1" button colour in sync with the connection */
+function updateDepLiveBtn() {
+  const b = document.getElementById('graphLive');
+  if (!b) return;
+  const live = isLive();
+  b.innerHTML = (live ? '🟢' : '🔴') + ' Live MS1';
+  b.classList.toggle('live-on', live);
+  b.title = live
+    ? 'Connected to SAP MS1 — pull the live where-used map'
+    : 'SAP MS1 not connected — click to retry, or open ⚙ to configure';
 }
 
 /* ---------- category → colour / group helpers ---------- */
@@ -1287,8 +1304,17 @@ function renderDepGraph() {
   };
   const liveBtn = document.getElementById('graphLive');
   if (liveBtn) {
-    liveBtn.style.display = State.sapConnected ? '' : 'none';
-    liveBtn.onclick = () => drawDepMermaid(true);
+    liveBtn.style.display = '';
+    updateDepLiveBtn();
+    verifyConnection();                 // refresh the real status when the tab opens
+    liveBtn.onclick = async () => {
+      if (isLive()) { drawDepMermaid(true); return; }
+      liveBtn.disabled = true; liveBtn.innerHTML = '<span class="spin"></span> Connecting…';
+      await verifyConnection();
+      liveBtn.disabled = false; updateDepLiveBtn();
+      if (isLive()) { toast('Connected to SAP MS1'); drawDepMermaid(true); }
+      else { toast('SAP MS1 not connected — open ⚙ SAP Connection to configure.', true); }
+    };
   }
   const pdfBtn = document.getElementById('graphPdf');
   if (pdfBtn) pdfBtn.onclick = () =>
