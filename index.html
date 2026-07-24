@@ -13,6 +13,8 @@
 <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
 <!-- Mermaid (dependency map diagram) -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<!-- jsPDF (export dependency / trace map to PDF) -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <!-- Excel export -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -532,6 +534,7 @@ tbody tr:hover{background:var(--panel2)}
       <button class="btn" id="graphZoomOut" title="Zoom out">－</button>
       <button class="btn" id="graphFit" title="Reset zoom">⤢ Reset</button>
       <button class="btn" id="graphLive" title="Pull live where-used from SAP MS1" style="display:none">🔴 Live MS1</button>
+      <button class="btn" id="graphPdf" title="Export the map to PDF">⬇ PDF</button>
       <span class="muted" id="graphInfo" style="margin-left:auto"></span>
     </div>
     <div id="depScroll" class="graph-scroll"><div id="depMermaid" class="mermaid-host"></div></div>
@@ -677,6 +680,7 @@ tbody tr:hover{background:var(--panel2)}
           <button class="gbtn" id="dgFit" title="Fit to view">⤢</button>
           <button class="gbtn" id="dgReset" title="Reset layout">↺</button>
           <button class="gbtn" id="dgWhereUsed" title="Trace live call logic from SAP MS1 (ABAP → dependent BW / ABAP objects)" style="width:auto;padding:0 8px;display:none">🔗 Trace call logic</button>
+          <button class="gbtn" id="dgPdf" title="Export this flow map to PDF" style="width:auto;padding:0 8px">⬇ PDF</button>
           <span class="gbadge" id="dgInfo"></span>
         </div>
         <div id="drawerGraph"></div>

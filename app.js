@@ -972,6 +972,9 @@ async function renderDrawerGraph(procName, objs) {
     wuBtn.disabled = false; wuBtn.innerHTML = '🔗 Trace call logic';
     wuBtn.onclick = () => traceDependencies(procName, objs);
   }
+  const pdfBtn = document.getElementById('dgPdf');
+  if (pdfBtn) pdfBtn.onclick = () =>
+    exportMapPdf(document.querySelector('#drawerGraph svg'), 'flowmap_' + _safeName(procName) + '.pdf');
 
   if (!edges.length) {
     if (connected && objs.length) { nodes = objs.map(o => o.name); nodesOnly = true; }
@@ -994,6 +997,9 @@ async function renderDrawerGraph(procName, objs) {
   if (zout) zout.onclick = () => { _drwZoom = Math.max(0.3, _drwZoom / 1.2); _sizeMermaidSvg(host(), _drwZoom); };
   if (fit) fit.onclick = () => { _drwZoom = 1; _sizeMermaidSvg(host(), _drwZoom); };
   if (reset) reset.onclick = () => renderDrawerGraph(procName, objs);
+  const pdf = document.getElementById('dgPdf');
+  if (pdf) pdf.onclick = () =>
+    exportMapPdf(document.querySelector('#drawerGraph svg'), 'flowmap_' + _safeName(procName) + '.pdf');
 
   if (info) {
     info.textContent = nodesOnly
@@ -1070,10 +1076,51 @@ function _initMermaid() {
   mermaid.initialize({
     startOnLoad: false, theme: 'dark', securityLevel: 'loose',
     themeVariables: { fontSize: '13px', primaryColor: '#13224a', lineColor: '#3a5488' },
-    flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis', nodeSpacing: 30, rankSpacing: 55 },
+    flowchart: { useMaxWidth: false, htmlLabels: false, curve: 'basis', nodeSpacing: 30, rankSpacing: 55 },
   });
   _mermaidReady = true;
 }
+
+/* export a rendered Mermaid SVG to a PDF and download it locally */
+async function exportMapPdf(svg, filename) {
+  if (!svg) { toast('No diagram to export yet.', true); return; }
+  if (!(window.jspdf && window.jspdf.jsPDF)) { toast('PDF library not loaded.', true); return; }
+  try {
+    const bw = parseFloat(svg.dataset.bw) || svg.getBoundingClientRect().width || 800;
+    const bh = parseFloat(svg.dataset.bh) || svg.getBoundingClientRect().height || 600;
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('width', bw);
+    clone.setAttribute('height', bh);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const xml = new XMLSerializer().serializeToString(clone);
+    const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const scale = 2;                                   // crisper raster
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(bw * scale);
+    canvas.height = Math.ceil(bh * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0b1020';                         // dark bg so light text shows
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.drawImage(img, 0, 0, bw, bh);
+    const png = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pad = 24;
+    const pdf = new jsPDF({ orientation: bw >= bh ? 'l' : 'p', unit: 'pt', format: [bw + pad * 2, bh + pad * 2] });
+    pdf.setFillColor(11, 16, 32);
+    pdf.rect(0, 0, bw + pad * 2, bh + pad * 2, 'F');
+    pdf.addImage(png, 'PNG', pad, pad, bw, bh);
+    pdf.save(filename);
+    toast('Exported ' + filename);
+    track('export_pdf', { file: filename });
+  } catch (e) {
+    toast('PDF export failed.', true);
+  }
+}
+
+function _safeName(s) { return (s || 'map').replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 60); }
 
 /* undirected adjacency of the whole dependency graph */
 function depAdjacency() {
@@ -1243,6 +1290,10 @@ function renderDepGraph() {
     liveBtn.style.display = State.sapConnected ? '' : 'none';
     liveBtn.onclick = () => drawDepMermaid(true);
   }
+  const pdfBtn = document.getElementById('graphPdf');
+  if (pdfBtn) pdfBtn.onclick = () =>
+    exportMapPdf(document.querySelector('#depMermaid svg'),
+      'dependency-map_' + _safeName(document.getElementById('graphRoot').value) + '.pdf');
   drawDepMermaid();
 }
 
