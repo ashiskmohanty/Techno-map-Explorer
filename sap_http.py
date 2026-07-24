@@ -268,6 +268,26 @@ def fetch_all(cfg: Optional[Dict[str, Any]] = None,
     return sorted(keep.values(), key=lambda o: o["name"])
 
 
+def read_source(name: str, cfg: Optional[Dict[str, Any]] = None) -> str:
+    """Fetch the ABAP source of a Z/Y object (FM / class / program) over ADT.
+
+    Best effort; returns '' when the object can't be resolved or read.
+    """
+    cfg = _cfg(cfg)
+    base = (name or "").split("=>")[0].strip()
+    if not is_configured(cfg) or not base:
+        return ""
+    hit = next((h for h in adt_search(base, cfg, max_results=8)
+                if h["name"].upper() == base.upper() and h.get("uri")), None)
+    if not hit:
+        return ""
+    src_path = hit["uri"].rstrip("/") + "/source/main"
+    try:
+        return (_get(cfg, src_path, accept="text/plain").get("raw", "") or "")
+    except Exception:
+        return ""
+
+
 # --------------------------------------------------------------------------- #
 # ADT where-used (usageReferences) over HTTP - no SDK
 # --------------------------------------------------------------------------- #

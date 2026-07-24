@@ -375,6 +375,43 @@ def api_sap_whereused():
         return jsonify({"edges": [], "source": "error", "error": str(e)})
 
 
+@app.route("/api/sap/uses", methods=["POST"])
+def api_sap_uses():
+    """Trace *call logic* of ABAP objects: read their source live from MS1 and
+    return edges ABAP -> referenced object (matched against known candidates,
+    e.g. BW planning sequences / functions / queries / filters)."""
+    payload = request.get_json(silent=True) or {}
+    names = payload.get("names") or []
+    candidates = payload.get("candidates") or []
+    if not names:
+        return jsonify({"edges": [], "source": "none"})
+    if not sap_http.is_configured():
+        return jsonify({"edges": [], "source": "offline"})
+    # only match reasonably long custom names to avoid false positives
+    cand = [(c, c.upper()) for c in candidates
+            if isinstance(c, str) and len(c.strip()) >= 6]
+    edges, seen = [], set()
+    try:
+        for nm in names[:10]:
+            src = sap_http.read_source(nm)
+            if not src:
+                continue
+            up = src.upper()
+            for c, cu in cand:
+                if cu == nm.upper():
+                    continue                       # skip self-reference
+                if cu in up:
+                    key = (nm, c)
+                    if key not in seen:
+                        seen.add(key)
+                        edges.append({"source": nm, "target": c, "kind": "calls"})
+        _track("uses_trace", n=len(names))
+        return jsonify({"edges": edges, "source": "live" if edges else "empty"})
+    except Exception as e:
+        app.logger.warning("uses trace failed: %s", e)
+        return jsonify({"edges": [], "source": "error", "error": str(e)})
+
+
 @app.route("/api/assistant/code", methods=["POST"])
 def api_assistant_code():
     """Scan ABAP/FOX code comments in SAP MS1 for the question terms.

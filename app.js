@@ -969,8 +969,8 @@ async function renderDrawerGraph(procName, objs) {
   const wuBtn = document.getElementById('dgWhereUsed');
   if (wuBtn) {
     wuBtn.style.display = connected ? '' : 'none';
-    wuBtn.disabled = false; wuBtn.innerHTML = '🔗 where-used';
-    wuBtn.onclick = () => enrichWhereUsed(procName, objs);
+    wuBtn.disabled = false; wuBtn.innerHTML = '🔗 Trace call logic';
+    wuBtn.onclick = () => traceDependencies(procName, objs);
   }
 
   if (!edges.length) {
@@ -997,48 +997,67 @@ async function renderDrawerGraph(procName, objs) {
 
   if (info) {
     info.textContent = nodesOnly
-      ? `${nodes.length} objects · click 🔗 where-used for SAP links`
-      : `${nodes.length} nodes · ${edges.length} links` + (connected ? ' · 🔗 where-used for SAP links' : '');
+      ? `${nodes.length} objects · click 🔗 Trace call logic for live MS1 dependencies`
+      : `${nodes.length} nodes · ${edges.length} links` + (connected ? ' · 🔗 Trace call logic for live MS1 links' : '');
   }
 }
 
-/* pull live where-used edges from SAP and merge them into the flow map */
-async function enrichWhereUsed(procName, objs) {
+/* trace live call logic (MS1): read the ABAP source, extract referenced custom
+   objects, expand any BW targets through the local BW chain, render data-flow */
+async function traceDependencies(procName, objs) {
   const container = document.getElementById('drawerGraph');
-  const names = objs.filter(o => o.custom).map(o => o.name);
-  if (!names.length) return;
-  const btn = document.getElementById('dgWhereUsed');
   const info = document.getElementById('dgInfo');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> where-used…'; }
+  const btn = document.getElementById('dgWhereUsed');
+  const abap = objs.filter(o => o.custom && o.domain === 'ABAP').map(o => o.name);
+  if (!abap.length) { if (info) info.textContent = 'No ABAP objects to trace in this process.'; return; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> tracing…'; }
   try {
-    const r = await fetch('/api/sap/whereused', {
+    const candidates = State.objects.filter(o => o.custom).map(o => o.name);
+    const r = await fetch('/api/sap/uses', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ names }),
+      body: JSON.stringify({ names: abap, candidates }),
     });
-    if (!r.ok) throw new Error('http');
     const res = await r.json();
-    const live = res.edges || [];
-    const sg = drawerSubgraph(objs);
-    const nodes = new Set(sg.nodes.length ? sg.nodes : names);
-    const edges = sg.edges.slice();
-    const seen = new Set(edges.map(e => e.source + '>' + e.target));
-    let added = 0;
-    live.forEach(e => {
-      nodes.add(e.source); nodes.add(e.target);
-      const k = e.source + '>' + e.target;
-      if (!seen.has(k)) { seen.add(k); edges.push({ source: e.source, target: e.target }); added++; }
-    });
+    const calls = res.edges || [];
+    const byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
+
+    const nodes = new Set(objs.map(o => o.name));
+    const edges = []; const seen = new Set();
+    const push = (s, t) => {
+      if (!s || !t || s === t) return;
+      const k = s + '>' + t; if (seen.has(k)) return; seen.add(k);
+      nodes.add(s); nodes.add(t); edges.push({ source: s, target: t });
+    };
+    calls.forEach(e => push(e.source, e.target));
+
+    // expand BW call targets through the local BW dependency chain (data flow)
+    const undirected = depAdjacency();
+    const bwTargets = calls.map(e => e.target).filter(t => (byName[t] || {}).domain === 'BW');
+    const q = bwTargets.map(n => [n, 0]); const cap = 200;
+    while (q.length && nodes.size < cap) {
+      const [n, d] = q.shift();
+      if (d >= 2) continue;
+      (undirected.get(n) || []).forEach(m => {
+        if (!nodes.has(m) && nodes.size < cap) { nodes.add(m); q.push([m, d + 1]); }
+      });
+    }
+    // add the real (directed) local edges among the resulting node set
+    (State.edges || []).forEach(e => { if (nodes.has(e.source) && nodes.has(e.target)) push(e.source, e.target); });
+
     _drwZoom = 1;
-    await _renderMermaidInto(container, [...nodes], edges, _drwZoom);
-    if (info) {
-      info.textContent = added
-        ? `${nodes.size} nodes · ${edges.length} links · +${added} SAP where-used`
-        : `${nodes.size} nodes · no additional SAP where-used links`;
+    if (!edges.length) {
+      container.innerHTML = '<div class="empty">No live call-logic references found for these objects in MS1.</div>';
+      if (info) info.textContent = '';
+    } else {
+      await _renderMermaidInto(container, [...nodes], edges, _drwZoom);
+      const bwCount = [...nodes].filter(n => (byName[n] || {}).domain === 'BW').length;
+      if (info) info.textContent =
+        `${nodes.size} nodes · ${edges.length} links · live call logic · ${bwCount} BW object${bwCount !== 1 ? 's' : ''}`;
     }
   } catch (e) {
-    if (info) info.textContent = 'SAP where-used unavailable (check ⚙ connection)';
+    if (info) info.textContent = 'SAP trace unavailable (check ⚙ connection)';
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '🔗 where-used'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '🔗 Trace call logic'; }
   }
 }
 
