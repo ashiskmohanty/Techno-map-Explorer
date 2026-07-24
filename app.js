@@ -981,66 +981,189 @@ async function enrichWhereUsed(objs) {
   }
 }
 
+/* ===================== DEPENDENCY MAP (Mermaid) ===================== */
+let _depZoom = 1;
+let _mermaidReady = false;
+
+function _initMermaid() {
+  if (_mermaidReady || !window.mermaid) return;
+  mermaid.initialize({
+    startOnLoad: false, theme: 'dark', securityLevel: 'loose',
+    themeVariables: { fontSize: '13px', primaryColor: '#13224a', lineColor: '#3a5488' },
+    flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis', nodeSpacing: 30, rankSpacing: 55 },
+  });
+  _mermaidReady = true;
+}
+
+/* undirected adjacency of the whole dependency graph */
+function depAdjacency() {
+  const adj = new Map();
+  const link = (a, b) => { if (!a || !b) return; if (!adj.has(a)) adj.set(a, new Set()); adj.get(a).add(b); };
+  (State.edges || []).forEach(e => { link(e.source, e.target); link(e.target, e.source); });
+  return adj;
+}
+
+/* ordering: ABAP Function Module → other ABAP → Planning Seq → Planning Func → rest */
+function _depRootRank(o) {
+  if (o.domain === 'ABAP' && o.category === 'Function Module') return 0;
+  if (o.domain === 'ABAP') return 1;
+  if (o.category === 'Planning Sequence') return 2;
+  if (o.category === 'Planning Function') return 3;
+  return 4;
+}
+
+function populateDepRoots() {
+  const rootSel = document.getElementById('graphRoot');
+  const proc = document.getElementById('graphProc').value;
+  const adj = depAdjacency();
+  const inProc = o => !proc || o.process === proc;
+  const objs = State.objects
+    .filter(o => o.custom && inProc(o) && adj.has(o.name) && (adj.get(o.name).size > 0))
+    .sort((a, b) => _depRootRank(a) - _depRootRank(b)
+      || (adj.get(b.name).size - adj.get(a.name).size)
+      || a.name.localeCompare(b.name));
+  const cur = rootSel.value;
+  rootSel.innerHTML = objs.length
+    ? objs.slice(0, 500).map(o =>
+        `<option value="${esc(o.name)}">${esc(o.name)} · ${esc(o.category)} (${adj.get(o.name).size})</option>`).join('')
+    : '<option value="">No connected objects</option>';
+  if (cur && objs.some(o => o.name === cur)) rootSel.value = cur;
+}
+
+/* connected sub-graph starting at `root` (capped for readability) */
+function depSubgraph(root, cap = 160, maxDepth = 6) {
+  const adj = depAdjacency();
+  const nodes = new Set([root]);
+  const q = [[root, 0]];
+  while (q.length && nodes.size < cap) {
+    const [n, d] = q.shift();
+    if (d >= maxDepth) continue;
+    (adj.get(n) || []).forEach(m => {
+      if (!nodes.has(m) && nodes.size < cap) { nodes.add(m); q.push([m, d + 1]); }
+    });
+  }
+  const edges = (State.edges || []).filter(e => nodes.has(e.source) && nodes.has(e.target));
+  return { nodes: [...nodes], edges };
+}
+
+function _mmClass(color) { return 'c' + color.replace('#', ''); }
+
+function depMermaidText(nodes, edges) {
+  const idOf = {}; let i = 0;
+  const nid = n => idOf[n] || (idOf[n] = 'n' + (i++));
+  const catOf = n => (State.objects.find(o => o.name === n) || {}).category || 'ABAP';
+  const clean = s => (s || '').replace(/["`]/g, '').replace(/\s+/g, ' ').trim();
+  const lines = ['flowchart LR'];
+  const classes = {};
+  nodes.forEach(n => {
+    const color = nodeColor(catOf(n));
+    const cls = _mmClass(color);
+    classes[cls] = color;
+    lines.push(`  ${nid(n)}["${clean(n)}"]:::${cls}`);
+  });
+  const seen = new Set();
+  edges.forEach(e => {
+    const k = e.source + '>' + e.target;
+    if (seen.has(k)) return; seen.add(k);
+    lines.push(`  ${nid(e.source)} --> ${nid(e.target)}`);
+  });
+  Object.entries(classes).forEach(([cls, color]) =>
+    lines.push(`  classDef ${cls} fill:${color},stroke:#0b1020,color:#0b1020,stroke-width:1px;`));
+  return lines.join('\n');
+}
+
+function setDepZoom(z) {
+  _depZoom = Math.max(0.3, Math.min(3, z));
+  const svg = document.querySelector('#depMermaid svg');
+  if (!svg || !svg.dataset.bw) return;
+  svg.style.width = (parseFloat(svg.dataset.bw) * _depZoom) + 'px';
+  svg.style.height = (parseFloat(svg.dataset.bh) * _depZoom) + 'px';
+}
+
+async function drawDepMermaid(live = false) {
+  _initMermaid();
+  const host = document.getElementById('depMermaid');
+  const info = document.getElementById('graphInfo');
+  const root = document.getElementById('graphRoot').value;
+  if (!host) return;
+  if (!root) {
+    host.innerHTML = '<div class="empty">No connected dependencies to display for this selection.</div>';
+    info.textContent = ''; return;
+  }
+  let nodes = null, edges = null, src = 'local';
+  if (live && State.sapConnected) {
+    info.textContent = 'Fetching live where-used from SAP MS1…';
+    try {
+      const r = await fetch('/api/sap/whereused', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: [root] }),
+      });
+      const res = await r.json();
+      if (res.edges && res.edges.length) {
+        const nset = new Set([root]);
+        res.edges.forEach(e => { nset.add(e.source); nset.add(e.target); });
+        nodes = [...nset];
+        edges = res.edges.map(e => ({ source: e.source, target: e.target }));
+        src = 'live MS1';
+      } else {
+        toast('No live where-used returned by MS1 — showing the local map.', true);
+      }
+    } catch (e) {
+      toast('Live MS1 fetch failed — showing the local map.', true);
+    }
+  }
+  if (!nodes) { const sg = depSubgraph(root); nodes = sg.nodes; edges = sg.edges; }
+
+  if (!edges.length) {
+    host.innerHTML = `<div class="empty">${esc(root)} has no mapped dependencies.</div>`;
+    info.textContent = `0 links · root: ${root}`; return;
+  }
+  const code = depMermaidText(nodes, edges);
+  try {
+    const { svg } = await mermaid.render('depSvg' + Date.now(), code);
+    host.innerHTML = svg;
+    const el = host.querySelector('svg');
+    if (el) {
+      let w = 0, h = 0;
+      const vb = (el.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+      if (vb.length === 4) { w = vb[2]; h = vb[3]; }
+      w = w || el.getBoundingClientRect().width || 800;
+      h = h || el.getBoundingClientRect().height || 600;
+      el.dataset.bw = w; el.dataset.bh = h;
+      el.removeAttribute('height'); el.style.maxWidth = 'none';
+      setDepZoom(_depZoom);
+    }
+  } catch (e) {
+    host.innerHTML = '<div class="empty">Could not render the dependency diagram.</div>';
+  }
+  info.textContent = `${nodes.length} nodes · ${edges.length} links · ${src} · root: ${root}`;
+}
+
 function renderDepGraph() {
-  const container = document.getElementById('depGraph');
   const procSel = document.getElementById('graphProc');
+  const rootSel = document.getElementById('graphRoot');
   if (!procSel.options.length) {
     procSel.innerHTML = '<option value="">All process areas</option>';
     State.processAreas.forEach(p => procSel.add(new Option(`${p.name} (${p.total})`, p.name)));
   }
-  const draw = () => {
-    const proc = procSel.value;
-    let objs = State.objects.filter(o => o.custom);
-    if (proc) objs = objs.filter(o => o.process === proc);
-    // hide isolated nodes so the map shows real dependencies only
-    const els = buildElements(objs, { onlyConnected: true });
-    if (State.depCy) { State.depCy.destroy(); State.depCy = null; }
-    if (!els.length) {
-      container.style.width = ''; container.style.height = '';
-      container.innerHTML = '<div class="empty">No linked dependencies to display for this selection.</div>';
-      return;
-    }
-    container.innerHTML = '';
-    // size the canvas larger than the viewport so the scrollable wrapper shows
-    // a side scrollbar for big graphs (nodes = elements that carry no source)
-    const nodeCount = els.filter(e => e.data && e.data.source === undefined).length;
-    const scroll = document.getElementById('depScroll');
-    const vw = (scroll ? scroll.clientWidth : 1000) - 4;
-    const vh = (scroll ? scroll.clientHeight : 640) - 4;
-    container.style.width = Math.max(vw, Math.min(5200, nodeCount * 22)) + 'px';
-    container.style.height = Math.max(vh, Math.min(3200, nodeCount * 11)) + 'px';
-    State.depCy = cytoscape({
-      container, elements: els, style: cyStyle,
-      layout: graphLayout(els.length),
-      wheelSensitivity: 0.3, minZoom: 0.1, maxZoom: 3,
-    });
-    State.depCy.ready(() => State.depCy.fit(null, 30));
-    document.getElementById('graphInfo').textContent =
-      `${State.depCy.nodes().length} nodes · ${State.depCy.edges().length} edges`;
-    State.depCy.on('tap', 'node', evt => {
-      const n = evt.target;
-      State.depCy.elements().addClass('faded');
-      const nb = n.closedNeighborhood();
-      nb.removeClass('faded'); nb.edges().addClass('hi');
-    });
-    State.depCy.on('tap', evt => { if (evt.target === State.depCy) State.depCy.elements().removeClass('faded hi'); });
-  };
-  procSel.onchange = draw;
-  const zoomBy = f => State.depCy &&
-    State.depCy.zoom({ level: State.depCy.zoom() * f,
-      renderedPosition: { x: State.depCy.width() / 2, y: State.depCy.height() / 2 } });
-  document.getElementById('graphZoomIn').onclick = () => zoomBy(1.3);
-  document.getElementById('graphZoomOut').onclick = () => zoomBy(1 / 1.3);
-  document.getElementById('graphFit').onclick = () => State.depCy && State.depCy.fit(null, 30);
-  document.getElementById('graphReset').onclick = () => { State.depCy && State.depCy.elements().removeClass('faded hi'); draw(); };
+  populateDepRoots();
+  procSel.onchange = () => { populateDepRoots(); drawDepMermaid(); };
+  rootSel.onchange = () => drawDepMermaid();
+  document.getElementById('graphZoomIn').onclick = () => setDepZoom(_depZoom * 1.2);
+  document.getElementById('graphZoomOut').onclick = () => setDepZoom(_depZoom / 1.2);
+  document.getElementById('graphFit').onclick = () => setDepZoom(1);
   document.getElementById('graphSearch').oninput = e => {
-    if (!State.depCy) return; const q = e.target.value.trim();
-    State.depCy.elements().removeClass('faded hi');
+    const q = e.target.value.trim();
     if (!q) return;
-    const match = State.depCy.nodes().filter(n => wildcard(q, n.data('label')));
-    if (match.length) { State.depCy.elements().addClass('faded'); match.removeClass('faded'); match.neighborhood().removeClass('faded'); match.connectedEdges().addClass('hi'); }
+    const opt = [...rootSel.options].find(o => o.value && wildcard(q, o.value));
+    if (opt) { rootSel.value = opt.value; drawDepMermaid(); }
   };
-  draw();
+  const liveBtn = document.getElementById('graphLive');
+  if (liveBtn) {
+    liveBtn.style.display = State.sapConnected ? '' : 'none';
+    liveBtn.onclick = () => drawDepMermaid(true);
+  }
+  drawDepMermaid();
 }
 
 /* ===================== CUSTOM OBJECTS TAB ===================== */
