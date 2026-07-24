@@ -901,47 +901,110 @@ function attachGraphControls(cy, ids, infoEl) {
   if (infoEl) infoEl.textContent = `${cy.nodes().length} nodes · ${cy.edges().length} edges`;
 }
 
-function renderDrawerGraph(procName, objs) {
+let _drwZoom = 1;
+
+/* local subgraph for a set of process objects: edges among them (and to any
+   custom Z/Y targets they reference) + the union of endpoints */
+function drawerSubgraph(objs) {
+  const nameSet = new Set(objs.map(o => o.name));
+  const nodes = new Set();
+  const edges = [];
+  const seen = new Set();
+  const CAP = 220;                       // keep the drawer diagram readable/fast
+  (State.edges || []).forEach(e => {
+    if (edges.length >= CAP) return;
+    const srcIn = nameSet.has(e.source);
+    const tgtIn = nameSet.has(e.target);
+    const keep = (srcIn && tgtIn) || (srcIn && e.target && /^[ZY/]/i.test(e.target));
+    if (!keep) return;
+    const k = e.source + '>' + e.target;
+    if (seen.has(k)) return; seen.add(k);
+    nodes.add(e.source); nodes.add(e.target);
+    edges.push({ source: e.source, target: e.target });
+  });
+  return { nodes: [...nodes], edges, capped: edges.length >= CAP };
+}
+
+function _sizeMermaidSvg(host, zoom) {
+  const svg = host.querySelector('svg');
+  if (!svg || !svg.dataset.bw) return;
+  svg.style.width = (parseFloat(svg.dataset.bw) * zoom) + 'px';
+  svg.style.height = (parseFloat(svg.dataset.bh) * zoom) + 'px';
+}
+
+async function _renderMermaidInto(container, nodes, edges, zoom) {
+  _initMermaid();
+  container.innerHTML = '<div class="mermaid-host"></div>';
+  const host = container.querySelector('.mermaid-host');
+  const code = depMermaidText(nodes, edges);
+  try {
+    const { svg } = await mermaid.render('drwSvg' + Date.now(), code);
+    host.innerHTML = svg;
+    const el = host.querySelector('svg');
+    if (el) {
+      let w = 0, h = 0;
+      const vb = (el.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+      if (vb.length === 4) { w = vb[2]; h = vb[3]; }
+      w = w || el.getBoundingClientRect().width || 600;
+      h = h || el.getBoundingClientRect().height || 500;
+      el.dataset.bw = w; el.dataset.bh = h;
+      el.removeAttribute('height'); el.style.maxWidth = 'none';
+      _sizeMermaidSvg(host, zoom);
+    }
+  } catch (e) {
+    container.innerHTML = '<div class="empty">Could not render the dependency diagram.</div>';
+  }
+}
+
+async function renderDrawerGraph(procName, objs) {
   const container = document.getElementById('drawerGraph');
   if (State.drawerCy) { State.drawerCy.destroy(); State.drawerCy = null; }
+  _drwZoom = 1;
   const info = document.getElementById('dgInfo');
   const connected = State.sapConnected || (State.assistant && State.assistant.searchMs1);
-  let els = buildElements(objs, { onlyConnected: true });
-  let nodesOnly = false;
-  if (!els.length) {
-    // no local edges — if connected, show the objects as standalone nodes so
-    // the user can pull real SAP where-used links; else show the hint.
-    if (connected && objs.length) { els = buildElements(objs, { onlyConnected: false }); nodesOnly = true; }
-    if (!els.length) {
-      container.innerHTML = '<div class="empty">No linked dependencies for this process — see the object hierarchy above.</div>';
-      if (info) info.textContent = '';
-      const b0 = document.getElementById('dgWhereUsed'); if (b0) b0.style.display = 'none';
-      return;
-    }
-  }
-  container.innerHTML = '';
-  State.drawerCy = cytoscape({
-    container, elements: els, style: cyStyle,
-    layout: graphLayout(els.length),
-    wheelSensitivity: 0.3, minZoom: 0.15, maxZoom: 3,
-  });
-  State.drawerCy.ready(() => State.drawerCy.fit(null, 30));
-  attachGraphControls(State.drawerCy,
-    { zin: 'dgZoomIn', zout: 'dgZoomOut', fit: 'dgFit', reset: 'dgReset' }, info);
-  if (info && nodesOnly) info.textContent = `${State.drawerCy.nodes().length} objects · click 🔗 where-used for SAP links`;
-  // on-demand: load real SAP where-used dependencies when connected
+
+  const sg = drawerSubgraph(objs);
+  let nodes = sg.nodes, edges = sg.edges, nodesOnly = false;
+
   const wuBtn = document.getElementById('dgWhereUsed');
   if (wuBtn) {
     wuBtn.style.display = connected ? '' : 'none';
     wuBtn.disabled = false; wuBtn.innerHTML = '🔗 where-used';
-    wuBtn.onclick = () => enrichWhereUsed(objs);
+    wuBtn.onclick = () => enrichWhereUsed(procName, objs);
+  }
+
+  if (!edges.length) {
+    if (connected && objs.length) { nodes = objs.map(o => o.name); nodesOnly = true; }
+    else {
+      container.innerHTML = '<div class="empty">No linked dependencies for this process — see the object hierarchy above.</div>';
+      if (info) info.textContent = '';
+      return;
+    }
+  }
+
+  await _renderMermaidInto(container, nodes, edges, _drwZoom);
+
+  // zoom / reset tools drive the SVG size (so the scroll area reflects zoom)
+  const zin = document.getElementById('dgZoomIn');
+  const zout = document.getElementById('dgZoomOut');
+  const fit = document.getElementById('dgFit');
+  const reset = document.getElementById('dgReset');
+  const host = () => container.querySelector('.mermaid-host');
+  if (zin) zin.onclick = () => { _drwZoom = Math.min(3, _drwZoom * 1.2); _sizeMermaidSvg(host(), _drwZoom); };
+  if (zout) zout.onclick = () => { _drwZoom = Math.max(0.3, _drwZoom / 1.2); _sizeMermaidSvg(host(), _drwZoom); };
+  if (fit) fit.onclick = () => { _drwZoom = 1; _sizeMermaidSvg(host(), _drwZoom); };
+  if (reset) reset.onclick = () => renderDrawerGraph(procName, objs);
+
+  if (info) {
+    info.textContent = nodesOnly
+      ? `${nodes.length} objects · click 🔗 where-used for SAP links`
+      : `${nodes.length} nodes · ${edges.length} links` + (connected ? ' · 🔗 where-used for SAP links' : '');
   }
 }
 
 /* pull live where-used edges from SAP and merge them into the flow map */
-async function enrichWhereUsed(objs) {
-  const cy = State.drawerCy;
-  if (!cy) return;
+async function enrichWhereUsed(procName, objs) {
+  const container = document.getElementById('drawerGraph');
   const names = objs.filter(o => o.custom).map(o => o.name);
   if (!names.length) return;
   const btn = document.getElementById('dgWhereUsed');
@@ -954,25 +1017,23 @@ async function enrichWhereUsed(objs) {
     });
     if (!r.ok) throw new Error('http');
     const res = await r.json();
-    const edges = res.edges || [];
-    if (cy !== State.drawerCy) return;
+    const live = res.edges || [];
+    const sg = drawerSubgraph(objs);
+    const nodes = new Set(sg.nodes.length ? sg.nodes : names);
+    const edges = sg.edges.slice();
+    const seen = new Set(edges.map(e => e.source + '>' + e.target));
     let added = 0;
-    edges.forEach(e => {
-      if (!cy.getElementById(e.target).length) {
-        cy.add({ group: 'nodes', data: { id: e.target, label: e.target, color: '#f59e0b', cat: e.type || 'ABAP', proc: '', size: 18 } });
-      }
-      const id = e.source + '::' + e.target + '::wu';
-      if (cy.getElementById(e.source).length && !cy.getElementById(id).length) {
-        cy.add({ group: 'edges', data: { id, source: e.source, target: e.target } });
-        added++;
-      }
+    live.forEach(e => {
+      nodes.add(e.source); nodes.add(e.target);
+      const k = e.source + '>' + e.target;
+      if (!seen.has(k)) { seen.add(k); edges.push({ source: e.source, target: e.target }); added++; }
     });
-    if (added) {
-      cy.layout(graphLayout(cy.nodes().length)).run();
-      cy.fit(null, 30);
-      if (info) info.textContent = `${cy.nodes().length} nodes · ${cy.edges().length} edges · +${added} SAP where-used`;
-    } else if (info) {
-      info.textContent = `${cy.nodes().length} nodes · no additional SAP where-used links`;
+    _drwZoom = 1;
+    await _renderMermaidInto(container, [...nodes], edges, _drwZoom);
+    if (info) {
+      info.textContent = added
+        ? `${nodes.size} nodes · ${edges.length} links · +${added} SAP where-used`
+        : `${nodes.size} nodes · no additional SAP where-used links`;
     }
   } catch (e) {
     if (info) info.textContent = 'SAP where-used unavailable (check ⚙ connection)';

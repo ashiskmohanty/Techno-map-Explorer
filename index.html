@@ -222,7 +222,15 @@ tbody tr:hover{background:var(--panel2)}
 .sec-title{font-size:13px;font-weight:700;margin:20px 0 10px;display:flex;align-items:center;gap:8px;
   text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
 .sec-title .line{flex:1;height:1px;background:var(--border)}
-#drawerGraph{height:300px;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
+#drawerGraph{height:300px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);
+  overflow:auto}
+#drawerGraph{scrollbar-color:#2b3f6e var(--bg);scrollbar-width:thin}
+#drawerGraph::-webkit-scrollbar{width:14px;height:14px}
+#drawerGraph::-webkit-scrollbar-track{background:var(--bg);border-radius:10px}
+#drawerGraph::-webkit-scrollbar-thumb{background:#2b3f6e;border:3px solid var(--bg);border-radius:10px}
+#drawerGraph::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+#drawerGraph .mermaid-host{display:inline-block;min-width:100%;padding:14px;transform-origin:top left}
+#drawerGraph .mermaid-host svg{display:block}
 
 /* ---------- Flow map: zoom tools + legend ---------- */
 .graph-wrap{position:relative}
