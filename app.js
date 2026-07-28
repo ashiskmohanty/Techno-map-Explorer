@@ -1268,6 +1268,57 @@ function depSubgraph(root, cap = 160, maxDepth = 6) {
   return { nodes: [...nodes], edges };
 }
 
+/* focused planning subgraph — a Planning Sequence with ONLY its own planning
+   functions / filters (and any ABAP a function calls); never fans out into the
+   other sequences that happen to share a filter. For a Planning Function/Filter
+   it keeps the object in the centre and connects the sequences that use it. */
+function planFocusSubgraph(root) {
+  const byU = {};
+  (State.objects || []).forEach(o => { byU[o.name.toUpperCase()] = o; });
+  const catOf = n => (byU[n.toUpperCase()] || {}).category || '';
+  const domOf = n => (byU[n.toUpperCase()] || {}).domain || '';
+  const isSeq = c => /Planning Sequence/i.test(c);
+  const isFuncOrFilter = c => /Planning Function|Filter/i.test(c);
+  const all = State.edges || [];
+  const ru = root.toUpperCase();
+  const nodes = new Set([root]);
+  const edges = []; const seen = new Set();
+  const push = (s, t) => {
+    if (!s || !t || s === t) return;
+    const k = s + '>' + t; if (seen.has(k)) return; seen.add(k);
+    nodes.add(s); nodes.add(t); edges.push({ source: s, target: t });
+  };
+
+  if (isSeq(catOf(root))) {
+    // 1) sequence -> its own planning functions & filters (exclude other sequences)
+    all.forEach(e => {
+      if (e.source.toUpperCase() !== ru) return;
+      const tc = catOf(e.target);
+      if (isSeq(tc)) return;
+      if (isFuncOrFilter(tc)) push(e.source, e.target);
+    });
+    // 2) each of those planning functions -> only the ABAP class/method it calls
+    //    (do NOT pull each function's own filters — that fans the map out)
+    [...nodes].filter(n => /Planning Function/i.test(catOf(n))).forEach(f => {
+      const fu = f.toUpperCase();
+      all.forEach(e => {
+        if (e.source.toUpperCase() !== fu) return;
+        if (domOf(e.target) === 'ABAP') push(e.source, e.target);
+      });
+    });
+  } else {
+    // Planning Function / Filter: centre it, connect the sequences that use it…
+    all.forEach(e => { if (e.target.toUpperCase() === ru) push(e.source, e.target); });
+    // …and its own filters / ABAP children (one hop, no sequence fan-out)
+    all.forEach(e => {
+      if (e.source.toUpperCase() !== ru) return;
+      if (isSeq(catOf(e.target))) return;
+      push(e.source, e.target);
+    });
+  }
+  return { nodes: [...nodes], edges };
+}
+
 function _mmClass(color) { return 'c' + color.replace('#', ''); }
 
 function depMermaidText(nodes, edges) {
@@ -1370,13 +1421,18 @@ async function drawDepMermaid(live = false) {
     return;
   }
   let nodes = null, edges = null, src = 'local';
-  if (live && isLive()) {
+  const _byU = {}; (State.objects || []).forEach(o => { _byU[o.name.toUpperCase()] = o; });
+  const isPlanning = /Planning Sequence|Planning Function|Filter/i.test((_byU[root.toUpperCase()] || {}).category || '');
+  if (live && isLive() && !isPlanning) {
     info.textContent = 'Fetching live dependencies from SAP MS1…';
     const g = await fetchLiveGraph(root);
     if (g) { nodes = g.nodes; edges = g.edges; src = g.src; }
     else { toast('No live dependencies returned by MS1 for this object — showing the local map.', true); }
   }
-  if (!nodes) { const sg = depSubgraph(root); nodes = sg.nodes; edges = sg.edges; }
+  if (!nodes) {
+    const sg = isPlanning ? planFocusSubgraph(root) : depSubgraph(root);
+    nodes = sg.nodes; edges = sg.edges;
+  }
 
   // new base -> reset the object selection
   State.depBase = { nodes, edges, src, root };
@@ -2493,11 +2549,18 @@ function initAssistant() {
     const bubble = addBot(`<span class="acheck"><span class="spin"></span> Building the dependency map for `
       + `<b>${esc(name)}</b>${liveOn ? ' — pulling live links from SAP MS1' : ''}…</span>`);
 
-    const sg = depSubgraph(name);
+    const _byU = {}; (State.objects || []).forEach(o => { _byU[o.name.toUpperCase()] = o; });
+    const _obj = _byU[name.toUpperCase()] || {};
+    const isPlanning = /Planning Sequence|Planning Function|Filter/i.test(_obj.category || '');
+
+    const sg = isPlanning ? planFocusSubgraph(name) : depSubgraph(name);
     const nodes = new Set(sg.nodes);
     const edges = sg.edges.slice();
     const seen = new Set(edges.map(e => e.source + '>' + e.target));
-    if (liveOn) {
+    // Live enrichment only for ABAP objects; planning links live fully in the
+    // local snapshot, and pulling live where-used would drag in unrelated
+    // sequences that merely share a filter.
+    if (liveOn && !isPlanning) {
       try {
         const g = await fetchLiveGraph(name);
         if (g) {
@@ -2527,7 +2590,7 @@ function initAssistant() {
 
     bubble.innerHTML = `<div class="answer">`
       + `<p>Dependency map for <b>${esc(name)}</b> — <b>${nodeArr.length}</b> objects · <b>${edges.length}</b> links `
-      + `${liveOn ? '(local map + live SAP MS1)' : '(local map)'}.</p>`
+      + `${isPlanning ? '(planning structure: sequence · functions · filters)' : (liveOn ? '(local map + live SAP MS1)' : '(local map)')}.</p>`
       + `<div class="botmap-tools">`
       + `<a class="botmap-pdf">⬇ Download PDF</a>`
       + `<a class="botmap-open">↗ Open in Dependency Map tab</a></div>`
