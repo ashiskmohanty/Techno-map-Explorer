@@ -1301,9 +1301,18 @@ function planFocusSubgraph(root) {
     //    (do NOT pull each function's own filters — that fans the map out)
     [...nodes].filter(n => /Planning Function/i.test(catOf(n))).forEach(f => {
       const fu = f.toUpperCase();
+      // (a) explicit local edges Planning Function -> ABAP object
       all.forEach(e => {
         if (e.source.toUpperCase() !== fu) return;
         if (domOf(e.target) === 'ABAP') push(e.source, e.target);
+      });
+      // (b) a Z/Y ABAP class named in the function's technical details / description
+      const o = byU[fu] || {};
+      const text = `${o.technical || ''} ${o.description || ''}`.toUpperCase();
+      (text.match(/[ZY][A-Z0-9_\/]{2,}/g) || []).forEach(tok => {
+        if (tok === fu) return;
+        const t = byU[tok];
+        if (t && t.domain === 'ABAP' && /Class/i.test(t.category || '')) push(f, t.name);
       });
     });
   } else {
