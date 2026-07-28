@@ -140,15 +140,50 @@ def _load_fox():
 
 
 def _flag_fox(data):
-    """Mark planning-function objects that carry a FOX formula so the UI can
-    offer to display it. No SAP call — uses the local fox_formulas.json."""
+    """Mark planning-function objects that carry a FOX formula, and add a light
+    'FOX Formula' node + edge (PlanningFunction -> FOX definition) so the
+    dependency map shows the formula against the function, mirroring the exit
+    class. No SAP call — uses the local fox_formulas.json.
+
+    The FOX node is domain 'FOX' / custom False so it does not inflate the
+    ABAP / BW / custom-object counts; it only appears in the graph.
+    """
     fox = _load_fox()
     if not fox:
         return data
-    for o in data.get("objects", []):
-        if o.get("category") == "Planning Function" \
-                and str(o.get("name", "")).upper() in fox:
-            o["hasFox"] = True
+    objs = data.setdefault("objects", [])
+    edges = data.setdefault("edges", [])
+    by_upper = {str(o.get("name", "")).upper(): o for o in objs}
+    edge_seen = {(str(e.get("source", "")).upper(), str(e.get("target", "")).upper())
+                 for e in edges}
+    for o in list(objs):
+        if o.get("category") != "Planning Function":
+            continue
+        fn = str(o.get("name", ""))
+        if fn.upper() not in fox:
+            continue
+        o["hasFox"] = True
+        node_name = "FOX_" + fn
+        if node_name.upper() not in by_upper:
+            fo = {
+                "name": node_name,
+                "domain": "FOX",
+                "category": "FOX Formula",
+                "custom": False,
+                "process": o.get("process") or "Unassigned",
+                "package": "",
+                "author": "",
+                "created": "",
+                "description": "FOX formula definition of %s (RSPLF_SRV_P)" % fn,
+                "source": "SAP:RSPLF_SRV_P",
+                "foxOf": fn,
+            }
+            objs.append(fo)
+            by_upper[node_name.upper()] = fo
+        key = (fn.upper(), node_name.upper())
+        if key not in edge_seen:
+            edge_seen.add(key)
+            edges.append({"source": fn, "target": node_name, "kind": "planfunc-fox"})
     return data
 
 

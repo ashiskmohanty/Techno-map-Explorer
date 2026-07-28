@@ -842,6 +842,7 @@ function nodeColor(cat) {
   if (cat === 'Filter') return '#a78bfa';
   if (cat === 'BEx Query') return '#22d3ee';
   if (cat === 'Aggregation Level' || cat === 'InfoProvider') return '#2dd4a7';
+  if (cat === 'FOX Formula') return '#34d399';
   if (['Function Module', 'Class', 'Interface', 'Table Maintenance', 'Method', 'Function Group'].includes(cat)) return '#f472b6';
   return '#94a3b8';
 }
@@ -1301,10 +1302,10 @@ function planFocusSubgraph(root) {
     //    (do NOT pull each function's own filters — that fans the map out)
     [...nodes].filter(n => /Planning Function/i.test(catOf(n))).forEach(f => {
       const fu = f.toUpperCase();
-      // (a) explicit local edges Planning Function -> ABAP object
+      // (a) explicit local edges Planning Function -> ABAP class or FOX formula
       all.forEach(e => {
         if (e.source.toUpperCase() !== fu) return;
-        if (domOf(e.target) === 'ABAP') push(e.source, e.target);
+        if (domOf(e.target) === 'ABAP' || /FOX Formula/i.test(catOf(e.target))) push(e.source, e.target);
       });
       // (b) a Z/Y ABAP class named in the function's technical details / description
       const o = byU[fu] || {};
