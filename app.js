@@ -1418,6 +1418,85 @@ async function fetchPlanLinks(name) {
   } catch (e) { return []; }
 }
 
+/* Shared dependency-map builder used by BOTH the chat answer and the Dependency
+   Map tab so they always agree. Dynamic per object type:
+   - Planning Seq/Func/Filter  -> focused planning structure
+   - ABAP Class                -> deep OUTGOING: Class -> Methods -> Plan Seq ->
+                                  Plan Function -> filter/exit-class/FOX (live),
+                                  pruned to the component connected to the class
+   - other ABAP (FM, …)        -> local + live uses/where-used                */
+async function computeDepMap(root, liveOn) {
+  const byU = {}; (State.objects || []).forEach(o => { byU[o.name.toUpperCase()] = o; });
+  const obj = byU[root.toUpperCase()] || {};
+  const catOf = n => (byU[n.toUpperCase()] || {}).category || '';
+  const isPlanning = /Planning Sequence|Planning Function|Filter/i.test(obj.category || '');
+  const isAbapClass = /Class/i.test(obj.category || '')
+    || (!obj.category && /^(\/[A-Z0-9]+\/)?[ZY]/i.test(root) && /CL_|CLASS/i.test(root));
+
+  const base = isPlanning ? planFocusSubgraph(root) : depSubgraph(root);
+  const nodes = new Set(base.nodes);
+  const edges = base.edges.slice();
+  const seen = new Set(edges.map(e => e.source + '>' + e.target));
+  const push = (s, t) => {
+    if (!s || !t || s === t) return;
+    const k = s + '>' + t; if (seen.has(k)) return; seen.add(k);
+    nodes.add(s); nodes.add(t); edges.push({ source: s, target: t });
+  };
+  let src = 'local';
+
+  if (isAbapClass) {
+    if (liveOn) {
+      try {
+        const structural = /Planning Sequence|Planning Function|Filter|Aggregation Level|BEx Query|Class|Function Module|Interface|Function Group/i;
+        const candidates = State.objects.filter(o => o.custom && structural.test(o.category || '')).map(o => o.name);
+        const r = await fetch('/api/sap/classmap', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: root, candidates }),
+        });
+        const res = await r.json();
+        (res.edges || []).forEach(e => push(e.source, e.target));
+        if ((res.edges || []).length) src = 'live MS1';
+      } catch (e) { /* keep local */ }
+    }
+    // reverse: planning functions that call this class
+    (State.edges || []).forEach(e => {
+      if (e.kind === 'planfunc-class' && (e.target || '').toUpperCase() === root.toUpperCase())
+        push(e.source, e.target);
+    });
+    // expand discovered plan SEQUENCES downward (bounded)
+    [...nodes].filter(n => /Planning Sequence/i.test(catOf(n))).forEach(sq => {
+      planFocusSubgraph(sq).edges.forEach(e => push(e.source, e.target));
+    });
+    // plan FUNCTIONS reached -> only downstream (class / FOX / filter)
+    [...nodes].filter(n => /Planning Function/i.test(catOf(n))).forEach(fn => {
+      const fu = fn.toUpperCase();
+      (State.edges || []).forEach(e => {
+        if (e.source.toUpperCase() === fu && /planfunc-class|planfunc-fox|planfunc-filter/i.test(e.kind || ''))
+          push(e.source, e.target);
+      });
+    });
+    // keep ONLY the component connected to the class root
+    const adj = new Map();
+    const link = (a, b) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push(b); };
+    edges.forEach(e => { link(e.source, e.target); link(e.target, e.source); });
+    const reach = new Set([root]); const stack = [root];
+    while (stack.length) {
+      const cur = stack.pop();
+      (adj.get(cur) || []).forEach(t => { if (!reach.has(t)) { reach.add(t); stack.push(t); } });
+    }
+    const kept = edges.filter(e => reach.has(e.source) && reach.has(e.target));
+    edges.length = 0; kept.forEach(e => edges.push(e));
+    nodes.clear(); reach.forEach(n => nodes.add(n));
+  } else if (liveOn && !isPlanning) {
+    try {
+      const g = await fetchLiveGraph(root);
+      if (g) { g.nodes.forEach(n => nodes.add(n)); g.edges.forEach(e => push(e.source, e.target)); src = g.src; }
+    } catch (e) { /* keep local */ }
+  }
+  nodes.add(root);
+  return { nodes: [...nodes], edges, src, isPlanning, isAbapClass };
+}
+
 async function drawDepMermaid(live = false) {
   _initMermaid();
   const host = document.getElementById('depMermaid');
@@ -1430,19 +1509,9 @@ async function drawDepMermaid(live = false) {
     State.depBase = null; renderObjSelector(document.getElementById('depObjList'), [], new Set(), () => {});
     return;
   }
-  let nodes = null, edges = null, src = 'local';
-  const _byU = {}; (State.objects || []).forEach(o => { _byU[o.name.toUpperCase()] = o; });
-  const isPlanning = /Planning Sequence|Planning Function|Filter/i.test((_byU[root.toUpperCase()] || {}).category || '');
-  if (live && isLive() && !isPlanning) {
-    info.textContent = 'Fetching live dependencies from SAP MS1…';
-    const g = await fetchLiveGraph(root);
-    if (g) { nodes = g.nodes; edges = g.edges; src = g.src; }
-    else { toast('No live dependencies returned by MS1 for this object — showing the local map.', true); }
-  }
-  if (!nodes) {
-    const sg = isPlanning ? planFocusSubgraph(root) : depSubgraph(root);
-    nodes = sg.nodes; edges = sg.edges;
-  }
+  info.textContent = 'Building the dependency map…';
+  const map = await computeDepMap(root, live && isLive());
+  const nodes = map.nodes, edges = map.edges, src = map.src;
 
   // new base -> reset the object selection
   State.depBase = { nodes, edges, src, root };
@@ -2604,81 +2673,10 @@ function initAssistant() {
       + `<b>${esc(name)}</b>${liveOn ? ' — pulling live links from SAP MS1' : ''}…</span>`);
 
     const _byU = {}; (State.objects || []).forEach(o => { _byU[o.name.toUpperCase()] = o; });
-    const _obj = _byU[name.toUpperCase()] || {};
-    const isPlanning = /Planning Sequence|Planning Function|Filter/i.test(_obj.category || '');
-    const isAbapClass = /Class/i.test(_obj.category || '')
-      || (!_obj.category && /^(\/[A-Z0-9]+\/)?[ZY]/i.test(name) && /CL_|CLASS/i.test(name));
-
-    let sg;
-    if (isPlanning) sg = planFocusSubgraph(name);
-    else if (isAbapClass) sg = depSubgraph(name);      // local reverse (planfunc-class) chains
-    else sg = depSubgraph(name);
-    const nodes = new Set(sg.nodes);
-    const edges = sg.edges.slice();
-    const seen = new Set(edges.map(e => e.source + '>' + e.target));
-    const push = (s, t) => {
-      if (!s || !t || s === t) return;
-      const k = s + '>' + t; if (seen.has(k)) return; seen.add(k);
-      nodes.add(s); nodes.add(t); edges.push({ source: s, target: t });
-    };
-    if (isAbapClass) {
-      // deep OUTGOING map: Class -> Methods -> Plan Seq -> Plan Function -> …
-      if (liveOn) {
-        try {
-          const structural = /Planning Sequence|Planning Function|Filter|Aggregation Level|BEx Query|Class|Function Module|Interface|Function Group/i;
-          const candidates = State.objects.filter(o => o.custom && structural.test(o.category || '')).map(o => o.name);
-          const r = await fetch('/api/sap/classmap', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, candidates }),
-          });
-          (await r.json()).edges.forEach(e => push(e.source, e.target));
-        } catch (e) { /* keep local */ }
-      }
-      // reverse: planning functions that call this class (local planfunc-class edges)
-      (State.edges || []).forEach(e => {
-        if (e.kind === 'planfunc-class' && (e.target || '').toUpperCase() === name.toUpperCase())
-          push(e.source, e.target);
-      });
-      const catOf = n => (_byU[n.toUpperCase()] || {}).category || '';
-      // expand each discovered Plan SEQUENCE downward: seq -> functions -> filter/class/FOX
-      // (bounded — planFocusSubgraph on a sequence never fans out to other sequences)
-      [...nodes].filter(n => /Planning Sequence/i.test(catOf(n))).forEach(sq => {
-        planFocusSubgraph(sq).edges.forEach(e => push(e.source, e.target));
-      });
-      // for any Plan FUNCTION reached, add only its downstream (class / FOX / filter),
-      // never its parent sequences (which would explode the graph)
-      [...nodes].filter(n => /Planning Function/i.test(catOf(n))).forEach(fn => {
-        const fu = fn.toUpperCase();
-        (State.edges || []).forEach(e => {
-          if (e.source.toUpperCase() === fu
-              && /planfunc-class|planfunc-fox|planfunc-filter/i.test(e.kind || ''))
-            push(e.source, e.target);
-        });
-      });
-      // keep ONLY what is actually connected to the class root, so the map is
-      // unambiguously about this class (drops any stray/disconnected cluster)
-      const adj = new Map();
-      const link = (a, b) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push(b); };
-      edges.forEach(e => { link(e.source, e.target); link(e.target, e.source); });
-      const reach = new Set([name]);
-      const stack = [name];
-      while (stack.length) {
-        const cur = stack.pop();
-        (adj.get(cur) || []).forEach(t => { if (!reach.has(t)) { reach.add(t); stack.push(t); } });
-      }
-      const keptEdges = edges.filter(e => reach.has(e.source) && reach.has(e.target));
-      edges.length = 0; keptEdges.forEach(e => edges.push(e));
-      nodes.clear(); reach.forEach(n => nodes.add(n));
-    } else if (liveOn && !isPlanning) {
-      // Live enrichment for other ABAP objects (FM etc.)
-      try {
-        const g = await fetchLiveGraph(name);
-        if (g) {
-          g.nodes.forEach(n => nodes.add(n));
-          g.edges.forEach(e => { const k = e.source + '>' + e.target; if (!seen.has(k)) { seen.add(k); edges.push(e); } });
-        }
-      } catch (e) { /* keep local */ }
-    }
+    const map = await computeDepMap(name, liveOn);
+    const isPlanning = map.isPlanning;
+    const nodes = new Set(map.nodes);
+    const edges = map.edges;
     nodes.add(name);
     const nodeArr = [...nodes];
 
@@ -2722,10 +2720,17 @@ function initAssistant() {
       const tab = document.querySelector('[data-view="depmap"]'); if (tab) tab.click();
       setTimeout(() => {
         const rs = document.getElementById('graphRoot');
-        if (rs) {
-          const opt = [...rs.options].find(o => o.value.toUpperCase() === name.toUpperCase());
-          if (opt) { rs.value = opt.value; rs.dispatchEvent(new Event('change')); }
+        if (!rs) return;
+        let opt = [...rs.options].find(o => o.value.toUpperCase() === name.toUpperCase());
+        if (!opt) {
+          // class / object not in the local root list (e.g. live-only ABAP class) —
+          // add it so the tab can build the same map the chat just showed
+          rs.add(new Option(name, name), 0);
+          opt = rs.options[0];
         }
+        rs.value = opt.value;
+        // build live so class maps (which need the source read) resolve
+        drawDepMermaid(isLive());
       }, 350);
     });
   }
