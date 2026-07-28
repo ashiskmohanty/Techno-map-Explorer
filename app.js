@@ -1332,7 +1332,7 @@ function planFocusSubgraph(root) {
 function _mmClass(color) { return 'c' + color.replace('#', ''); }
 
 function depMermaidText(nodes, edges) {
-  const idOf = {}; let i = 0;
+  const idOf = Object.create(null); let i = 0;
   const nid = n => idOf[n] || (idOf[n] = 'n' + (i++));
   const catOf = n => (State.objects.find(o => o.name === n) || {}).category || 'ABAP';
   const clean = s => (s || '').replace(/["`]/g, '').replace(/\s+/g, ' ').trim();

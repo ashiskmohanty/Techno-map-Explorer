@@ -596,18 +596,16 @@ def api_sap_classmap():
 
     matched_any = False
     for meth, btext in blocks:
-        bu = btext.upper()
-        refs = [c for (c, cu) in cand if cu in bu]
-        if not refs:
-            continue
-        matched_any = True
         disp = meth.split("~")[-1]                      # strip interface prefix
-        add(name, disp, "class-method")
-        for r in refs:
-            add(disp, r, "method-uses")
+        add(name, disp, "class-method")                 # ALL methods of the class
+        bu = btext.upper()
+        for c, cu in cand:
+            if cu in bu:
+                matched_any = True
+                add(disp, c, "method-uses")             # method -> plan seq / class / FM
 
-    # references outside any method (class definition / attributes) -> attach to class
-    if not matched_any:
+    # if the source couldn't be split into methods, attach references to the class
+    if not blocks:
         for c, cu in cand:
             add(name, c, "calls")
 
