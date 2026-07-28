@@ -1014,9 +1014,9 @@ def api_admin_metrics():
         + len(teach) * 6
     )
     try:
-        roi_rate = float(os.environ.get("PSPE_ROI_RATE", "85"))      # loaded $/hr
+        roi_rate = float(os.environ.get("PSPE_ROI_RATE", "40"))      # loaded $/hr
     except Exception:
-        roi_rate = 85.0
+        roi_rate = 40.0
     try:
         roi_factor = float(os.environ.get("PSPE_ROI_FACTOR", "0.7")) # credibility
     except Exception:
