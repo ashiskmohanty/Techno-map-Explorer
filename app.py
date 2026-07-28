@@ -992,6 +992,38 @@ def api_admin_metrics():
     total_clicks = sum(week.values())
     avg_clicks_week = round(total_clicks / len(week)) if week else 0
 
+    # ---- ROI: effort & cost saved (net minutes each automated action saves
+    #      vs doing it by hand in SAP). Rate / factor overridable via env. ----
+    matched_q = matched
+    NET_MIN = {                       # net minutes saved per event
+        "query": 14.5, "live_search": 11, "uses_trace": 38, "drawer": 19,
+        "export_pdf": 59, "export": 29.5, "object_add": 8, "object_edit": 8,
+        "refresh": 118, "rebuild": 235,
+    }
+    effort_min = (
+        matched_q * NET_MIN["query"]
+        + live * NET_MIN["live_search"]
+        + counts.get("uses_trace", 0) * NET_MIN["uses_trace"]
+        + counts.get("drawer", 0) * NET_MIN["drawer"]
+        + counts.get("export_pdf", 0) * NET_MIN["export_pdf"]
+        + counts.get("export", 0) * NET_MIN["export"]
+        + counts.get("object_add", 0) * NET_MIN["object_add"]
+        + counts.get("object_edit", 0) * NET_MIN["object_edit"]
+        + counts.get("refresh", 0) * NET_MIN["refresh"]
+        + counts.get("rebuild", 0) * NET_MIN["rebuild"]
+        + len(teach) * 6
+    )
+    try:
+        roi_rate = float(os.environ.get("PSPE_ROI_RATE", "85"))      # loaded $/hr
+    except Exception:
+        roi_rate = 85.0
+    try:
+        roi_factor = float(os.environ.get("PSPE_ROI_FACTOR", "0.7")) # credibility
+    except Exception:
+        roi_factor = 0.7
+    effort_hours = round(effort_min / 60 * roi_factor, 1)
+    cost_saved = round(effort_hours * roi_rate)
+
     return jsonify({
         "kpis": {
             "queries": len(q),
@@ -1007,6 +1039,12 @@ def api_admin_metrics():
             "unique_users": len(users),
             "active_days": len(day),
             "total_events": len(ev),
+        },
+        "roi": {
+            "effort_saved_hours": effort_hours,
+            "cost_saved_usd": cost_saved,
+            "rate": roi_rate,
+            "factor": roi_factor,
         },
         "queries_per_day": [{"day": d, "n": n} for d, n in sorted(day.items())][-21:],
         "clicks_per_week": [{"week": w, "n": n} for w, n in weeks_sorted][-12:],

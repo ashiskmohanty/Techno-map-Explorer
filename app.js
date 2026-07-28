@@ -2659,18 +2659,21 @@ async function loadAdminMetrics() {
 function renderAdminKpisLists() {
   const m = State.adminMetrics; if (!m) return;
   const k = m.kpis || {};
+  const roi = m.roi || {};
   setText('admGen', 'data as of ' + (m.generated || '—'));
+  const cost = (roi.cost_saved_usd || 0).toLocaleString('en-US');
   const cards = [
+    ['💰 ROI', `Cost saved = ${cost} USD`, 'ok roi'],
     ['Bot queries', k.queries, ''], ['Match rate', (k.match_rate || 0) + '%', 'ok'],
     ['Avg clicks / week', k.avg_clicks_per_week, 'abap'],
     ['Unique questions', k.unique_questions, ''], ['Live SAP searches', k.live_searches, 'abap'],
     ['Teachings', k.teachings, 'bw'], ['Feedback given', k.feedback_total, 'warn'],
-    ['Drawer opens', k.drawer_opens, ''], ['Excel exports', k.exports, ''],
+    ['Excel exports', k.exports, ''],
     ['Refreshes', k.refreshes, ''], ['Unique users', k.unique_users, 'ok'],
-    ['Active days', k.active_days, ''], ['Total events', k.total_events, ''],
+    ['Active days', k.active_days, ''],
   ];
   document.getElementById('admKpis').innerHTML = cards.map(([l, v, c]) =>
-    `<div class="kpi ${c}"><div class="k-label">${l}</div><div class="k-val">${v ?? 0}</div></div>`).join('');
+    `<div class="kpi ${c}" ${l === '💰 ROI' ? `title="Effort saved ≈ ${roi.effort_saved_hours || 0} hrs · rate $${roi.rate || 0}/hr · factor ${roi.factor || 0}"` : ''}><div class="k-label">${l}</div><div class="k-val">${v ?? 0}</div></div>`).join('');
 
   const liRow = (kk, vv) => `<div class="li"><span class="lk">${esc(kk)}</span><span class="lv">${esc(vv)}</span></div>`;
   document.getElementById('admTopQ').innerHTML =
