@@ -2170,6 +2170,11 @@ function initAssistant() {
         || /^(clear|reset|clean|wipe|start over|new chat|clear all)\.?$/.test(s)
         || /\bclear (the )?(chat|response|screen|conversation)\b/.test(s)) return { action: 'clear' };
     if (/^(help|examples?|what can you|how (do|does|to)|guide|usage)\b/.test(s) || s === '?') return { action: 'help' };
+    // dependency map / diagram request
+    if (/\b(dependenc\w*|flow)\s*(map|diagram|graph|chart|tree|view)\b/.test(s)
+        || /\b(show|display|draw|render|visuali[sz]e|generate|build|give|create|plot)\b[^?]*\b(map|diagram|graph|flow|mermaid|dependenc\w*)\b/.test(s)
+        || /\bmermaid\b/.test(s))
+      return { action: 'depmap' };
     // impact / where-used analysis
     if ((/\b(impact\w*|affect\w*|break\w*|broken|blast\s*radius|dependenc\w*|dependent|regress\w*)\b/.test(s)
           && /\b(change|changing|changed|modif\w+|update\w*|delete\w*|adjust\w*|touch|remove\w*|if i|when i|used|uses|call\w*|of|to)\b/.test(s))
@@ -2441,6 +2446,83 @@ function initAssistant() {
     }
   }
 
+  /* ---- DEPENDENCY MAP in chat: render a Mermaid map (local + live MS1) + PDF ---- */
+  async function dependencyMapAnswer(displayQ) {
+    const name = resolveTargetObject(displayQ);
+    if (!name) {
+      addBot(`Which object should I map? e.g. <i>“show the dependency map for ZCPD_DPS_PLAN_VAL_SE”</i>.`);
+      return;
+    }
+    const liveOn = !!(State.assistant && State.assistant.searchMs1) && isLive();
+    track('query', { q: displayQ, matched: true, topAcc: 100, live: liveOn });
+
+    const bubble = addBot(`<span class="acheck"><span class="spin"></span> Building the dependency map for `
+      + `<b>${esc(name)}</b>${liveOn ? ' — pulling live links from SAP MS1' : ''}…</span>`);
+
+    const sg = depSubgraph(name);
+    const nodes = new Set(sg.nodes);
+    const edges = sg.edges.slice();
+    const seen = new Set(edges.map(e => e.source + '>' + e.target));
+    if (liveOn) {
+      try {
+        const g = await fetchLiveGraph(name);
+        if (g) {
+          g.nodes.forEach(n => nodes.add(n));
+          g.edges.forEach(e => { const k = e.source + '>' + e.target; if (!seen.has(k)) { seen.add(k); edges.push(e); } });
+        }
+      } catch (e) { /* keep local */ }
+    }
+    nodes.add(name);
+    const nodeArr = [...nodes];
+
+    if (nodeArr.length <= 1 || !edges.length) {
+      bubble.innerHTML = `<div class="answer"><p>No linked objects found for <b>${esc(name)}</b> `
+        + `${liveOn ? 'in the local map or live SAP MS1' : 'locally — turn on 🌐 Search SAP MS1 live for a code-level map'}.</p></div>`;
+      return;
+    }
+
+    _initMermaid();
+    let svgHtml = '';
+    try {
+      const { svg } = await mermaid.render('botMap' + Date.now(), depMermaidText(nodeArr, edges));
+      svgHtml = svg;
+    } catch (e) {
+      bubble.innerHTML = `<div class="answer"><p>Could not render the diagram for ${esc(name)}.</p></div>`;
+      return;
+    }
+
+    bubble.innerHTML = `<div class="answer">`
+      + `<p>Dependency map for <b>${esc(name)}</b> — <b>${nodeArr.length}</b> objects · <b>${edges.length}</b> links `
+      + `${liveOn ? '(local map + live SAP MS1)' : '(local map)'}.</p>`
+      + `<div class="botmap-tools">`
+      + `<a class="botmap-pdf">⬇ Download PDF</a>`
+      + `<a class="botmap-open">↗ Open in Dependency Map tab</a></div>`
+      + `<div class="botmap">${svgHtml}</div></div>`;
+
+    const svgEl = bubble.querySelector('.botmap svg');
+    if (svgEl) {
+      let w = 0, h = 0;
+      const vb = (svgEl.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+      if (vb.length === 4) { w = vb[2]; h = vb[3]; }
+      w = w || svgEl.getBoundingClientRect().width || 800;
+      h = h || svgEl.getBoundingClientRect().height || 600;
+      svgEl.dataset.bw = w; svgEl.dataset.bh = h;
+      svgEl.removeAttribute('height'); svgEl.style.maxWidth = 'none';
+    }
+    bubble.querySelector('.botmap-pdf').addEventListener('click',
+      () => exportMapPdf(bubble.querySelector('.botmap svg'), 'dependency-map_' + _safeName(name) + '.pdf'));
+    bubble.querySelector('.botmap-open').addEventListener('click', () => {
+      const tab = document.querySelector('[data-view="depmap"]'); if (tab) tab.click();
+      setTimeout(() => {
+        const rs = document.getElementById('graphRoot');
+        if (rs) {
+          const opt = [...rs.options].find(o => o.value.toUpperCase() === name.toUpperCase());
+          if (opt) { rs.value = opt.value; rs.dispatchEvent(new Event('change')); }
+        }
+      }, 350);
+    });
+  }
+
   function doSearch(displayQ, searchQ) {
     const taught = taughtFor(searchQ);
     const results = rankObjects(searchQ, 8);
@@ -2583,6 +2665,7 @@ function initAssistant() {
       return;
     }
     if (local.action === 'impact') { impactAnalysis(q); return; }
+    if (local.action === 'depmap') { dependencyMapAnswer(q); return; }
 
     // 2) if an LLM is wired, let it interpret generic phrasing
     if (State.assistant && State.assistant.llm) {
