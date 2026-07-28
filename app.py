@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 from flask import Flask, jsonify, request, send_from_directory
 
@@ -56,11 +57,78 @@ def load_or_build():
     with open(path, "r", encoding="utf-8") as fh:
         data = json.load(fh)
     data = _apply_edits(_merge_manual(data))
+    data = _merge_rspls(data)
     data = _merge_planfunc_class(data)
     data = _flag_fox(data)
     pkgs = _load_pkgs()
     if pkgs:
         data["packages"] = pkgs
+    return data
+
+
+RSPLS_FILE = os.environ.get("PSPE_RSPLS_FILE") or os.path.join(HERE, "rspls_sequence.json")
+
+
+def _merge_rspls(data):
+    """Overlay authoritative Planning Sequence steps from SAP table
+    RSPLS_SEQUENCE_S (SEQNM -> functions/SRVNM + filters/SELOBJ, OBJVERS='A'),
+    read once and stored locally. The BW Excel snapshot is often incomplete, so
+    this fills in any planning functions / filters missing from a sequence.
+
+    Only sequences already present in the repository are enriched. Missing
+    functions / filters are added as BW objects so the dependency map can show
+    them. No live SAP call."""
+    try:
+        with open(RSPLS_FILE, "r", encoding="utf-8") as fh:
+            seqmap = (json.load(fh) or {}).get("seq", {})
+    except Exception:
+        return data
+    if not seqmap:
+        return data
+
+    objs = data.setdefault("objects", [])
+    edges = data.setdefault("edges", [])
+    by_upper = {str(o.get("name", "")).upper(): o for o in objs}
+    edge_seen = {(str(e.get("source", "")).upper(), str(e.get("target", "")).upper(),
+                  e.get("kind")) for e in edges}
+
+    def ensure(name, category, process):
+        key = name.upper()
+        o = by_upper.get(key)
+        if o:
+            return o
+        o = {
+            "name": name,
+            "domain": "BW",
+            "category": category,
+            "custom": bool(re.match(r"^[ZY]", name, re.I)),
+            "process": process or "Unassigned",
+            "package": "", "author": "", "created": "",
+            "description": "%s (RSPLS_SEQUENCE_S)" % category,
+            "source": "SAP:RSPLS_SEQUENCE_S",
+        }
+        objs.append(o)
+        by_upper[key] = o
+        return o
+
+    def add_edge(s, t, kind):
+        k = (s.upper(), t.upper(), kind)
+        if k in edge_seen:
+            return
+        edge_seen.add(k)
+        edges.append({"source": s, "target": t, "kind": kind})
+
+    for seq, steps in seqmap.items():
+        so = by_upper.get(seq.upper())
+        if not so or so.get("category") != "Planning Sequence":
+            continue                                   # only enrich known sequences
+        proc = so.get("process")
+        for fn in steps.get("functions", []):
+            ensure(fn, "Planning Function", proc)
+            add_edge(seq, fn, "planseq-planfunc")
+        for fl in steps.get("filters", []):
+            ensure(fl, "Filter", proc)
+            add_edge(seq, fl, "planseq-filter")
     return data
 
 

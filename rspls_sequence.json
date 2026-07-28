@@ -1,0 +1,5027 @@
+{
+"_comment": "Planning Sequence (RSPLS_SEQUENCE_S, OBJVERS='A') -> ordered steps: functions (SRVNM), filters (SELOBJ), aggregation levels (AGGRLEVEL), queries (QUERYNM). Read-only, stored locally (no live SAP call).",
+"seq": {
+"/CPD/PFP_A01_PS01": {
+"functions": [
+"/CPD/PFP_A01_PF07",
+"/CPD/PFP_A01_PF37"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10"
+],
+"aggr": [
+"/CPD/PFP_A01"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS02": {
+"functions": [
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"/CPD/PFP_M_A3_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS02_SE": {
+"functions": [
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"/CPD/PFP_M_A3_FIL02_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS03": {
+"functions": [
+"/CPD/PFP_A01_PF07",
+"/CPD/PFP_A01_PF15"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10"
+],
+"aggr": [
+"/CPD/PFP_A01"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS10": {
+"functions": [
+"/CPD/PFP_A01_PF35"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10"
+],
+"aggr": [
+"/CPD/PFP_A01"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS13": {
+"functions": [
+"/CPD/PFP_A01_PF05"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10"
+],
+"aggr": [
+"/CPD/PFP_A01"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS14": {
+"functions": [
+"/CPD/PFP_A01_PF07",
+"/CPD/PFP_A01_PF29"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10"
+],
+"aggr": [
+"/CPD/PFP_A01"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS15": {
+"functions": [
+"/CPD/PFP_A01_PF07",
+"/CPD/PFP_A01_PF36"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10"
+],
+"aggr": [
+"/CPD/PFP_A01"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS16": {
+"functions": [
+"/CPD/PFP_A01_PF06",
+"/CPD/PFP_D_A1_PF01"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A01",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS17": {
+"functions": [
+"/CPD/PFP_A01_PF04",
+"/CPD/PFP_D_A1_PF03"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A01",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS18": {
+"functions": [
+"/CPD/PFP_A01_PF02",
+"/CPD/PFP_D_A1_PF02"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A01",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A01_PS19": {
+"functions": [
+"/CPD/PFP_A01_PF09",
+"/CPD/PFP_D_A1_PF04"
+],
+"filters": [
+"/CPD/PFP_A01_FIL10",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A01",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A01_SYNC_PS": {
+"functions": [
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01"
+],
+"filters": [
+"/CPD/PFP_M_A3_FIL02_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS01": {
+"functions": [
+"/CPD/PFP_A02_PF07",
+"/CPD/PFP_A02_PF25"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS02": {
+"functions": [
+"/CPD/PFP_A02_PF23"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS03": {
+"functions": [
+"/CPD/PFP_A02_PF28",
+"/CPD/PFP_A02_PF29",
+"/CPD/PFP_A02_PF30"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS04": {
+"functions": [
+"/CPD/PFP_A02_PF07",
+"/CPD/PFP_A02_PF17"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS05": {
+"functions": [
+"/CPD/PFP_A02_PF07",
+"/CPD/PFP_A02_PF24"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS06": {
+"functions": [
+"/CPD/PFP_A02_PF07",
+"/CPD/PFP_A02_PF37"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS07": {
+"functions": [
+"/CPD/PFP_A02_PF07",
+"/CPD/PFP_A02_PF29"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS08": {
+"functions": [
+"/CPD/PFP_A02_PF09"
+],
+"filters": [
+"/CPD/PFP_A02_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS15": {
+"functions": [
+"/CPD/PFP_A02_PF06",
+"/CPD/PFP_D_A1_PF01"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A02",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS16": {
+"functions": [
+"/CPD/PFP_A02_PF04",
+"/CPD/PFP_D_A1_PF03"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A02",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS17": {
+"functions": [
+"/CPD/PFP_A02_PF02",
+"/CPD/PFP_D_A1_PF02"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A02",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS18": {
+"functions": [
+"/CPD/PFP_A02_PF19",
+"/CPD/PFP_D_A1_PF06"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A02",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS19": {
+"functions": [
+"/CPD/PFP_A02_PF09",
+"/CPD/PFP_D_A1_PF04"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_A02",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_A02_PS20": {
+"functions": [
+"/CPD/PFP_A02_PF45"
+],
+"filters": [
+"/CPD/PFP_A02_FIL04"
+],
+"aggr": [
+"/CPD/PFP_A02"
+],
+"queries": []
+},
+"/CPD/PFP_D_A2_PS01": {
+"functions": [
+"/CPD/PFP_D_A2_PF03",
+"/CPD/PFP_D_A2_PF01"
+],
+"filters": [
+"/CPD/PFP_D_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_D_A2"
+],
+"queries": []
+},
+"/CPD/PFP_D_A2_PS02": {
+"functions": [
+"/CPD/PFP_D_A2_PF02"
+],
+"filters": [
+"/CPD/PFP_D_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_D_A2"
+],
+"queries": []
+},
+"/CPD/PFP_D_A3_PS01": {
+"functions": [
+"/CPD/PFP_D_A3_PF01"
+],
+"filters": [
+"/CPD/PFP_D_A3_FIL01"
+],
+"aggr": [
+"/CPD/PFP_D_A3"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS01": {
+"functions": [
+"/CPD/PFP_M_A1_PF1"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL08"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS02": {
+"functions": [
+"/CPD/PFP_M_A1_PF4",
+"/CPD/PFP_M_A1_PF10"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS03": {
+"functions": [
+"/CPD/PFP_M_A1_PF7"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL08"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS04": {
+"functions": [
+"/CPD/PFP_M_A1_PF15",
+"/CPD/PFP_M_A1_PF12"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS05": {
+"functions": [
+"/CPD/PFP_M_A1_PF16",
+"/CPD/PFP_M_A1_PF13"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL07"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS06": {
+"functions": [
+"/CPD/PFP_M_A1_PF12"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS07": {
+"functions": [
+"/CPD/PFP_M_A1_PF13"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS08": {
+"functions": [
+"/CPD/PFP_M_A1_PF19",
+"/CPD/PFP_M_A1_PF2"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS09": {
+"functions": [
+"/CPD/PFP_M_A1_PF20",
+"/CPD/PFP_M_A1_PF8"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS1": {
+"functions": [
+"/CPD/PFP_M_A1_PF4",
+"/CPD/PFP_M_A1_PF5"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS10": {
+"functions": [
+"/CPD/PFP_M_A1_PF61",
+"/CPD/PFP_M_A1_PF62",
+"/CPD/PFP_M_A1_PF63",
+"/CPD/PFP_M_A1_PF64"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01",
+"/CPD/PFP_M_A1_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS11": {
+"functions": [
+"/CPD/PFP_M_A1_PF65",
+"/CPD/PFP_M_A1_PF62",
+"/CPD/PFP_M_A1_PF64"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01",
+"/CPD/PFP_M_A1_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS12": {
+"functions": [
+"/CPD/PFP_M_A1_PF23",
+"/CPD/PFP_M_A1_PF14",
+"/CPD/PFP_M_A1_PF24"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS14": {
+"functions": [
+"/CPD/PFP_M_A1_PF26",
+"/CPD/PFP_M_A1_PF27"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS15": {
+"functions": [
+"/CPD/PFP_M_A1_PF26",
+"/CPD/PFP_M_A1_PF28"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS16": {
+"functions": [
+"/CPD/PFP_M_A1_PF26",
+"/CPD/PFP_M_A1_PF29"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS17": {
+"functions": [
+"/CPD/PFP_M_A1_PF47"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL08"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS18": {
+"functions": [
+"/CPD/PFP_M_A1_PF46"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL08"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS21": {
+"functions": [
+"/CPD/PFP_M_A1_PF32"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL22"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS22": {
+"functions": [
+"/CPD/PFP_M_A1_PF33"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL22"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS23": {
+"functions": [
+"/CPD/PFP_M_A1_PF38",
+"/CPD/PFP_M_A1_PF34",
+"/CPD/PFP_M_A1_PF36"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01",
+"/CPD/PFP_M_A1_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS25": {
+"functions": [
+"/CPD/PFP_M_A1_PF40",
+"/CPD/PFP_M_A1_PF41"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL08"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS26": {
+"functions": [
+"/CPD/PFP_M_A1_PF42"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL08"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS27": {
+"functions": [
+"/CPD/PFP_M_A1_PF41"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS28": {
+"functions": [
+"/CPD/PFP_M_A1_PF43",
+"/CPD/PFP_M_A1_PF44"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL08"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS29": {
+"functions": [
+"/CPD/PFP_M_A1_PF44"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS30": {
+"functions": [
+"/CPD/PFP_M_A1_PF45"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL08"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS32": {
+"functions": [
+"/CPD/PFP_M_A1_PF48",
+"/CPD/PFP_M_A1_PF34",
+"/CPD/PFP_M_A1_PF35",
+"/CPD/PFP_M_A1_PF36"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL01",
+"/CPD/PFP_M_A1_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A1_PS40": {
+"functions": [
+"/CPD/PFP_M_A1_PF60",
+"/CPD/PFP_M_A1_PF47",
+"/CPD/PFP_M_A1_PF46"
+],
+"filters": [
+"/CPD/PFP_M_A1_FIL10",
+"/CPD/PFP_M_A1_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS01": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF20"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS02": {
+"functions": [
+"/CPD/PFP_M_A2_PF18"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS04": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF12"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS05": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF19"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS06": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF31"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS11": {
+"functions": [
+"/CPD/PFP_M_A2_PF04",
+"/CPD/PFP_D_A1_PF01"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS12": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"/CPD/PFP_D_A1_PF02"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS13": {
+"functions": [
+"/CPD/PFP_M_A2_PF08",
+"/CPD/PFP_D_A1_PF03"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A2_PS14": {
+"functions": [
+"/CPD/PFP_M_A2_PF07",
+"/CPD/PFP_D_A1_PF04"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01",
+"/CPD/PFP_D_A1_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"/CPD/PFP_D_A1"
+],
+"queries": []
+},
+"/CPD/PFP_M_A3_PS01": {
+"functions": [
+"/CPD/PFP_M_A3_PF07",
+"/CPD/PFP_M_A3_PF08"
+],
+"filters": [
+"/CPD/PFP_M_A3_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"/CPD/PFP_M_A3_PS02": {
+"functions": [
+"/CPD/PFP_M_A3_PF09",
+"/CPD/PFP_M_A3_PF08"
+],
+"filters": [
+"/CPD/PFP_M_A3_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS01": {
+"functions": [
+"/CPD/PFP_M_A4_PF01",
+"/CPD/PFP_M_A4_PF02"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS02": {
+"functions": [
+"/CPD/PFP_M_A4_PF03",
+"/CPD/PFP_M_A4_PF04"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS03": {
+"functions": [
+"/CPD/PFP_M_A4_PF08",
+"/CPD/PFP_M_A4_PF09"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS04": {
+"functions": [
+"/CPD/PFP_M_A4_PF08",
+"/CPD/PFP_M_A4_PF10"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS05": {
+"functions": [
+"/CPD/PFP_M_A4_PF04"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS06": {
+"functions": [
+"/CPD/PFP_M_A4_PF02"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS07": {
+"functions": [
+"/CPD/PFP_M_A4_PF11",
+"/CPD/PFP_M_A4_PF12"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS08": {
+"functions": [
+"/CPD/PFP_M_A4_PF12"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS09": {
+"functions": [
+"/CPD/PFP_M_A4_PF13",
+"/CPD/PFP_M_A4_PF14"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A4_PS10": {
+"functions": [
+"/CPD/PFP_M_A4_PF14"
+],
+"filters": [
+"/CPD/PFP_M_A4_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"/CPD/PFP_M_A7_PS1": {
+"functions": [
+"/CPD/PFP_M_A7_PF1"
+],
+"filters": [
+"/CPD/PFP_M_A7_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A7"
+],
+"queries": []
+},
+"/CPD/PFP_M_A7_PS2": {
+"functions": [
+"/CPD/PFP_M_A7_PF2"
+],
+"filters": [
+"/CPD/PFP_M_A7_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A7"
+],
+"queries": []
+},
+"/CPD/PFP_M_A7_PS3": {
+"functions": [
+"/CPD/PFP_M_A7_PF3"
+],
+"filters": [
+"/CPD/PFP_M_A7_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A7"
+],
+"queries": []
+},
+"/CPD/PFP_M_A7_PS5": {
+"functions": [
+"/CPD/PFP_M_A7_PF5"
+],
+"filters": [
+"/CPD/PFP_M_A7_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A7"
+],
+"queries": []
+},
+"/CPD/PFP_M_A7_PS6": {
+"functions": [
+"/CPD/PFP_M_A7_PF6"
+],
+"filters": [
+"/CPD/PFP_M_A7_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A7"
+],
+"queries": []
+},
+"/CPD/PFP_M_A7_PS7": {
+"functions": [
+"/CPD/PFP_M_A7_PF7",
+"/CPD/PFP_M_A8_PF1"
+],
+"filters": [
+"/CPD/PFP_M_A7_FIL02",
+"/CPD/PFP_M_A8_FIL06"
+],
+"aggr": [
+"/CPD/PFP_M_A7",
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A8_PS1": {
+"functions": [
+"/CPD/PFP_M_A8_PF1"
+],
+"filters": [
+"/CPD/PFP_M_A8_FIL06"
+],
+"aggr": [
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A8_PS2": {
+"functions": [
+"/CPD/PFP_M_A8_PF12",
+"/CPD/PFP_M_A8_PF8",
+"/CPD/PFP_M_A8_PF9",
+"/CPD/PFP_M_A8_PF10"
+],
+"filters": [
+"/CPD/PFP_M_A8_FIL02",
+"/CPD/PFP_M_A8_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A8_PS3": {
+"functions": [
+"/CPD/PFP_M_A8_PF3",
+"/CPD/PFP_M_A8_PF4",
+"/CPD/PFP_M_A8_PF5",
+"/CPD/PFP_M_A8_PF6"
+],
+"filters": [
+"/CPD/PFP_M_A8_FIL02",
+"/CPD/PFP_M_A8_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A8_PS4": {
+"functions": [
+"/CPD/PFP_M_A8_PF7",
+"/CPD/PFP_M_A8_PF4",
+"/CPD/PFP_M_A8_PF6"
+],
+"filters": [
+"/CPD/PFP_M_A8_FIL02",
+"/CPD/PFP_M_A8_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A8_PS5": {
+"functions": [
+"/CPD/PFP_M_A8_PF11",
+"/CPD/PFP_M_A8_PF8",
+"/CPD/PFP_M_A8_PF10"
+],
+"filters": [
+"/CPD/PFP_M_A8_FIL02",
+"/CPD/PFP_M_A8_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A8_PS6": {
+"functions": [
+"/CPD/PFP_M_A8_PF2"
+],
+"filters": [
+"/CPD/PFP_M_A8_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A8_PS7": {
+"functions": [
+"/CPD/PFP_M_A8_PF13",
+"/CPD/PFP_M_A8_PF14",
+"/CPD/PFP_M_A8_PF15"
+],
+"filters": [
+"/CPD/PFP_M_A8_FIL04",
+"/CPD/PFP_M_A8_FIL05",
+"/CPD/PFP_M_A8_FIL07"
+],
+"aggr": [
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A8_PS8": {
+"functions": [
+"/CPD/PFP_M_A8_PF16"
+],
+"filters": [
+"/CPD/PFP_M_A8_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A8"
+],
+"queries": []
+},
+"/CPD/PFP_M_A9_PS01": {
+"functions": [
+"/CPD/PFP_M_A9_PF01"
+],
+"filters": [
+"/CPD/PFP_M_A9_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A9"
+],
+"queries": []
+},
+"TEST_FORECAST": {
+"functions": [
+"ZCPD_PFP_M_A4_PF14",
+"/CPD/PFP_M_A4_PF07",
+"ZCPD_PFP_M_A4_PF99",
+"ZCPD_PFP_M_A4_PF97",
+"ZCPD_PFP_M_A4_PF11"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL05",
+"ZCPD_PFP_M_A4_FIL99",
+"ZCPD_PFP_M_A4_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"TEST_PS": {
+"functions": [
+"ZCPD_PFP_M_A4_PF10",
+"TEST_PF14",
+"/CPD/PFP_M_A4_PF07",
+"ZCPD_PFP_M_A4_PF97",
+"ZCPD_PFP_M_A4_PF11"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL03",
+"ZCPD_PFP_M_A4_FIL05",
+"ZCPD_PFP_M_A4_FIL99",
+"ZCPD_PFP_M_A4_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"YCPD_DPS_PLAN_VAL_SE": {
+"functions": [
+"YPLAN_DISTRIBUTE"
+],
+"filters": [
+"YCOPYFIL_N"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"YSK_CALC_COST_PS01": {
+"functions": [
+"YSK_M_A4_RACALC_PF01"
+],
+"filters": [
+"YSK_M_A4_FILL99_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZCOPY_EXP": {
+"functions": [
+"ZCPD_PFP_COPY_PF26"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL15"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZCPD_A2_NPC_VAL_PS01": {
+"functions": [
+"ZCPD_PFP_M_A2_PF30"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL05"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_ASSIGN_ID_GEN": {
+"functions": [
+"ZCPD_ZAVR_APO_PF03"
+],
+"filters": [
+"ZCPD_ZAVR_APO_FIL03_SE"
+],
+"aggr": [
+"ZAVR_APO"
+],
+"queries": []
+},
+"ZCPD_COPY_EAC_TO_CFP": {
+"functions": [
+"ZCPD_PFP_M_A4_PF19",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_COPY_PF03",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04",
+"ZCPD_COPY_ZUNI_PF"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL12",
+"ZCPD_PFP_M_A2_FIL01_NEW",
+"ZCPDFFLVL_FIL02",
+"ZCPD_PFP_FILTER_FIL15",
+"ZCPD_PFP_M_A3_FIL01",
+"ZCPD_PFP_M_A4_FIL13"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"ZPLAN_ALL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_CR_PLAN_PS00": {
+"functions": [
+"ZCR_GRM_REPOST"
+],
+"filters": [
+"ZCOPYCR0"
+],
+"aggr": [
+"ZCOPYLVL1"
+],
+"queries": []
+},
+"ZCPD_CR_PLAN_PS01": {
+"functions": [
+"ZCOPY_PLAN_PLUS_CR_2"
+],
+"filters": [
+"ZCOPYCR1"
+],
+"aggr": [
+"ZCOPYLVL1"
+],
+"queries": []
+},
+"ZCPD_CR_PLAN_PS02": {
+"functions": [
+"ZCOPY_FF_REVENUE_2"
+],
+"filters": [
+"ZCOPYCR2"
+],
+"aggr": [
+"ZCOPYLVL1"
+],
+"queries": []
+},
+"ZCPD_DATE_TIME_PS01": {
+"functions": [
+"ZCPD_DELETE_TIMESTMP",
+"ZCPD_READ_TIMSTMPPF1",
+"ZCPD_SETKF_TIMESTMP"
+],
+"filters": [
+"ZCPD_TS_DFIL01",
+"ZCPD_TS_FIL01"
+],
+"aggr": [
+"ZA_CPDATE"
+],
+"queries": []
+},
+"ZCPD_DB_VALUATION_PS": {
+"functions": [
+"/CPD/PFP_M_A2_PF06",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01",
+"ZCPDFFLVL_FIL01",
+"/CPD/PFP_M_A3_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_DELETE_ECIF_REV": {
+"functions": [
+"ZCPD_DELETE_ECIF_REV",
+"ZCPD_PFP_M_A3_PF01"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL18",
+"ZPFP_M_A3_FIL02_SE"
+],
+"aggr": [
+"ZPLAN_ALL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_DEL_DATA_PS1": {
+"functions": [
+"ZCPD_ADD_DATA_PF00",
+"ZCPD_DEL_DATA_F00"
+],
+"filters": [
+"ZCPD_DEL_DATA_FIL00",
+"ZCPD_DEL_DATA_FIL01"
+],
+"aggr": [
+"ZCPD_DEL"
+],
+"queries": []
+},
+"ZCPD_DEL_DATA_PS2": {
+"functions": [
+"ZCPD_ADD_DATA_PF01",
+"ZCPD_DEL_DATA_F00"
+],
+"filters": [
+"ZCPD_DEL_DATA_FIL03",
+"ZCPD_DEL_DATA_FIL02"
+],
+"aggr": [
+"ZCPD_DEL"
+],
+"queries": []
+},
+"ZCPD_DEL_FPLAN_DATA": {
+"functions": [
+"ZCPD_DEL_DATA_FPLAN"
+],
+"filters": [
+"ZCPD_DEL_FPLAN_DATA_FIL"
+],
+"aggr": [
+"ZCPD_DEL"
+],
+"queries": []
+},
+"ZCPD_DEL_STAFF_PS01": {
+"functions": [
+"ZCPD_DEL_STAFF_PF01"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL02"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_DPS_F_FF_VAL_SE": {
+"functions": [
+"ZCPD_DPS_M_A4_PF14_1",
+"ZCPD_VAL_FCST",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_PFP_M_A4_PF96",
+"ZSPLIT_FISCP_CALM"
+],
+"filters": [
+"ZCPD_DPS_PFP_M_A4_FIL05",
+"ZCPD_PFP_FCST",
+"ZCPD_DPS_PFP_M_A4_FIL05_2",
+"ZCPD_DPS_PFP_M_A4_FIL04_1",
+"/CPD/PFP_M_A3_FIL02_SE"
+],
+"aggr": [
+"ZCPD_M_A1",
+"ZCPD_FCST",
+"/CPD/PFP_M_A4",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_DPS_F_TM_VAL_SE": {
+"functions": [
+"ZCPD_DPS_M_A4_PF14_1",
+"ZCPD_VAL_FCST",
+"ZCPD_PFP_M_A4_PF11",
+"ZSPLIT_FISCP_CALM"
+],
+"filters": [
+"ZCPD_DPS_PFP_M_A4_FIL05",
+"ZCPD_PFP_FCST",
+"ZCPD_DPS_PFP_M_A4_FIL05_2",
+"/CPD/PFP_M_A3_FIL02_SE"
+],
+"aggr": [
+"ZCPD_M_A1",
+"ZCPD_FCST",
+"/CPD/PFP_M_A4",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_DPS_PLAN_VAL_PO": {
+"functions": [
+"ZPLAN_DISTRIBUTION",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A3_PF01",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCOPYFIL_N",
+"ZCPD_PFP_M_A4_FIL91_SE",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_PLAN",
+"ZCPD_PFP_M_A2_DPS_FIL01_SE",
+"ZCPDFFLVL_DPS_FIL01_SE",
+"/CPD/PFP_M_A3_FIL02_SE",
+"ZPFP_M_A3_FIL02_SE1"
+],
+"aggr": [
+"ZCOPYLVL",
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_DPS_PLAN_VAL_SE": {
+"functions": [
+"ZPLAN_DISTRIBUTION",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_COPY_ACT_TO_CFP",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A3_PF01",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCOPYFIL_N",
+"ZCPD_PFP_M_A4_FIL91_SE",
+"ZCOPY_UNITS_FIL01",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_PLAN",
+"ZCPD_PFP_M_A2_DPS_FIL01_SE",
+"ZCPDFFLVL_DPS_FIL01_SE",
+"/CPD/PFP_M_A3_FIL02_SE",
+"ZPFP_M_A3_FIL02_SE1"
+],
+"aggr": [
+"ZCOPYLVL",
+"/CPD/PFP_M_A4",
+"ZPLAN_ALL",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_DPS_PLAN_VAL_TH": {
+"functions": [
+"ZDPS_VAL_PLAN",
+"ZDPS_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCPD_DPS_PLAN_TH_FIL01",
+"ZDPSFFLVL_DPS_FIL01_SE"
+],
+"aggr": [
+"ZDPS_VAL",
+"ZDPSFFLVL"
+],
+"queries": []
+},
+"ZCPD_EAC_CAL_SE1": {
+"functions": [
+"ZCPD_PFP_M_A4_PF17",
+"ZCPD_SYNC_FCST_RATE",
+"ZCPD_PFP_M_A4_PF18",
+"ZCPD_PFP_M_A4_PF96",
+"ZCPD_PFP_M_A3_PF02"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL05_SE_2",
+"ZCPD_PFP_FCST_1",
+"ZCPD_PFP_M_A4_FIL06_SE_1",
+"ZCPD_PFP_M_A4_FIL04_SE_1",
+"ZCPD_PFP_M_A3_FIL06"
+],
+"aggr": [
+"ZCPD_M_A1",
+"ZCPD_FCST",
+"/CPD/PFP_M_A4",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_EAC_CAL_SE2": {
+"functions": [
+"ZCPD_PFP_M_A4_PF17",
+"ZCPD_SYNC_FCST_RATE",
+"ZCPD_PFP_M_A4_PF18",
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL05_SE_2",
+"ZCPD_PFP_FCST_1",
+"ZCPD_PFP_M_A4_FIL06_SE_1",
+"ZCPD_PFP_M_A4_FIL04_SE_1"
+],
+"aggr": [
+"ZCPD_M_A1",
+"ZCPD_FCST",
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZCPD_EAC_TO_CFP": {
+"functions": [
+"ZCOPY_ACT_TO_PLAN"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL12"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZCPD_EVNT_PS01": {
+"functions": [
+"ZCPD_PLAN_GRM_EVNT"
+],
+"filters": [
+"ZCPD_EVNT_FILTER"
+],
+"aggr": [
+"ZCPDEVENT"
+],
+"queries": []
+},
+"ZCPD_FCST_LUMIRA": {
+"functions": [
+"ZCPD_VAL_FCST"
+],
+"filters": [
+"ZCPD_LUMIRA_FCST"
+],
+"aggr": [
+"ZCPD_FCST"
+],
+"queries": []
+},
+"ZCPD_FCST_LUMIRA2": {
+"functions": [
+"ZCPD_VAL_FCST"
+],
+"filters": [
+"ZCPD_LUMIRA_FCST2"
+],
+"aggr": [
+"ZCPD_FCST"
+],
+"queries": []
+},
+"ZCPD_FF_REV_UPD_PS01": {
+"functions": [
+"ZCPD_FF_REV_UPDT01"
+],
+"filters": [
+"ZCPD_FF_REV_UPDT_FIL01"
+],
+"aggr": [
+"ZFF_FCST"
+],
+"queries": []
+},
+"ZCPD_FORECAST_EDIT": {
+"functions": [
+"Z_FORECAST_EDIT_QTY",
+"ZCPD_EDITKF_FORECAST"
+],
+"filters": [
+"Z_FORECAST_EDIT_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZCPD_FORECAST_FF": {
+"functions": [
+"Z_CPD_FCST_FF_REV_N"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZCPD_FRST_PLAN_COPY": {
+"functions": [
+"ZCPD_PFP_M_A4_PF19",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL12",
+"ZCPD_PFP_M_A2_FIL01_NEW",
+"ZCPDFFLVL_FIL02",
+"ZCPD_PFP_M_A3_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_M_A1_RRR_PS01": {
+"functions": [
+"ZCPD_M_A1_RRR_PF01"
+],
+"filters": [
+"ZCPD_M_A1_RRR_FIL01"
+],
+"aggr": [
+"ZCPD_M_A1"
+],
+"queries": []
+},
+"ZCPD_PFP_COPY_EXP01": {
+"functions": [
+"ZCPD_PFP_COPY_PF03"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL15"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_DATA": {
+"functions": [
+"ZCPD_PFP_DELETE_DATA"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS01": {
+"functions": [
+"ZCPD_PFP_DELETE_F01"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS02": {
+"functions": [
+"ZCPD_PFP_DELETE_F02"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS03": {
+"functions": [
+"ZCPD_PFP_DELETE_F03"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS04": {
+"functions": [
+"ZCPD_PFP_DELETE_F04"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS05": {
+"functions": [
+"ZCPD_PFP_DELETE_F05"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS06": {
+"functions": [
+"ZCPD_PFP_DELETE_F06"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS07": {
+"functions": [
+"ZCPD_PFP_DELETE_F01"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL02"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS08": {
+"functions": [
+"ZCPD_PFP_DELETE_F08"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS09": {
+"functions": [
+"ZCPD_PFP_DELETE_F05"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL03"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS10": {
+"functions": [
+"ZCPD_PFP_DELETE_F07"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL04"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS11": {
+"functions": [
+"ZCPD_PFP_DELETE_F02"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL05"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS12": {
+"functions": [
+"ZCPD_PFP_DELETE_F09"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL06"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS13": {
+"functions": [
+"ZCPD_PFP_DELETE_F10"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL07"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS14": {
+"functions": [
+"ZCPD_PFP_DELETE_F12"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS15": {
+"functions": [
+"ZCPD_PFP_DELETE_F11"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL01"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS16": {
+"functions": [
+"ZCPD_PFP_DELETE_PS05",
+"ZCPD_PFP_DELETE_PS03",
+"ZCPD_PFP_DELETE_PS06"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL13",
+"ZCPD_PFP_FILTER_FIL10",
+"ZCPD_PFP_FILTER_FIL16"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS17": {
+"functions": [
+"ZCPD_PFP_DELETE_PS03",
+"ZCPD_PFP_DELETE_PS02"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL10",
+"ZCPD_PFP_FILTER_FIL08"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS18": {
+"functions": [
+"ZCPD_PFP_DELETE_PS05",
+"ZCPD_PFP_DELETE_PS03",
+"ZCPD_PFP_DELETE_PS06"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL13",
+"ZCPD_PFP_FILTER_FIL10",
+"ZCPD_PFP_FILTER_FIL16"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS19": {
+"functions": [
+"ZCPD_PFP_DELETE_PS05",
+"ZCPD_PFP_COPY_PF02",
+"ZCPD_PFP_DELETE_PS03"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL13",
+"ZCPD_PFP_FILTER_FIL14",
+"ZCPD_PFP_FILTER_FIL10"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_PS22": {
+"functions": [
+"ZCPD_PFP_DELETE_F01"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FIL02"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DELETE_RITM": {
+"functions": [
+"ZCPD_PFP_DELETE_F02"
+],
+"filters": [
+"ZCPD_PFP_FILTER_FILRITM"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_PFP_DEL_DEMAND": {
+"functions": [
+"ZPFP_PLAN_DEL_DEMAND"
+],
+"filters": [
+"ZPLAN_DEL_DEMAND"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_E_DPS_POST": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"ZDPS_PFP_M_A2_PF02"
+],
+"filters": [
+"ZCPD_PFP_M_A2_DPS_FIL_RP"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_FST_BULK_EM": {
+"functions": [
+"ZCPD_PFP_M_A4_PF06",
+"ZCPD_PFP_M_A4_PF05",
+"ZCPD_EMTKF_FORECAST",
+"ZCPD_PFP_M_A2_PF31"
+],
+"filters": [
+"Z_FORECAST_BLK_DEL_FILTER",
+"Z_FORECAST_BLK_EDIT_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZCPD_PFP_M_A2_INSERT": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"ZCPD_PFP_M_A2_PF20",
+"ZCPD_PFP_M_A2_PF24",
+"ZCPD_PFP_M_A2_PF01"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01",
+"ZCPD_PFP_M_A2_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_A2_PF01": {
+"functions": [
+"/CPD/PFP_M_A2_PF01"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_A2_PS01": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"ZCPD_PFP_M_A2_PF20",
+"ZCPD_PFP_M_A2_PF24"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_A2_PS01_E": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"ZCPD_PFP_M_A2_PF21",
+"ZCPD_PFP_M_A2_PF25",
+"ZCPD_PFP_M_A2_PF28"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_A2_PS01_T": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"ZCPD_PFP_M_A2_PF20"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_A2_PS02": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"ZCPD_PFP_M_A2_PF22"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_A2_PS03": {
+"functions": [
+"ZCPD_PFP_M_A2_PF03"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_PLAN_BULK": {
+"functions": [
+"ZCPD_PFP_M_A2_PF34",
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF01",
+"ZCPD_PFP_SET_HRS_N",
+"ZCPD_PFP_M_A2_PF24"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL31",
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_PLAN_EDIT": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"ZCPD_PFP_SET_HRS",
+"ZCPD_SUBCON_UN_LUM1",
+"ZCPD_PFP_M_A2_PF24"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01",
+"ZCOPYLVL2_N4"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCOPYLVL2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_PLAN_GROW": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"ZCPD_PFP_MEASURES"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL012"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_M_PLAN_TEST": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"ZCPD_PFP_SET_HRS",
+"ZCPD_PFP_M_A2_PF24",
+"ZCPD_VAL_PLAN"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01",
+"ZCPD_LUMIRA_PLAN"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPD_VAL"
+],
+"queries": []
+},
+"ZCPD_PFP_M_P_EDIT_EM": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"ZCPD_PFP_M_A2_PF23",
+"ZCPD_PFP_M_A2_PF25"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_PLN_BULK_EM": {
+"functions": [
+"ZCPD_PFP_M_A2_PF29",
+"/CPD/PFP_M_A2_PF05",
+"ZCPD_PFP_M_A2_PF07",
+"ZCPD_PFP_SET_CST_REV",
+"ZCPD_PFP_M_A2_PF27"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL07",
+"ZCPD_PFP_M_A2_FIL06"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_P_DPS_EDIT": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"ZDPS_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A2_DPS_FIL_RP",
+"ZCPD_PFP_P_DPS_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PFP_P_DPS_POST": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"ZDPS_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A2_DPS_FIL_RP",
+"ZCPD_PFP_P_DPS_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZCPD_PLAN_FF_REV_V1": {
+"functions": [
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCPDFFLVL_FIL01_1"
+],
+"aggr": [
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZCPD_PLAN_FF_REV_V2": {
+"functions": [
+"ZCPD_PLAN_FF_REV_V2"
+],
+"filters": [
+"ZTESTFILTER_PFF"
+],
+"aggr": [
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZCPD_PLAN_LUMIRA": {
+"functions": [
+"ZCPD_VAL_PLAN"
+],
+"filters": [
+"ZCPD_LUMIRA_PLAN"
+],
+"aggr": [
+"ZCPD_VAL"
+],
+"queries": []
+},
+"ZCPD_PLAN_LUMIRA2": {
+"functions": [
+"ZCPD_VAL_PLAN"
+],
+"filters": [
+"ZCPD_LUMIRA_PLAN2"
+],
+"aggr": [
+"ZCPD_VAL"
+],
+"queries": []
+},
+"ZCPD_PLAN_VALUATION": {
+"functions": [
+"ZCPD_PLAN_RR_CALC"
+],
+"filters": [
+"ZCPDFFLVL_FIL01_SE1"
+],
+"aggr": [
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZCPD_PLN_BULK_LABOR": {
+"functions": [
+"ZCPD_PFP_M_A2_PF34",
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF01",
+"ZCPD_PFP_SET_HRS_N",
+"ZCPD_PFP_M_A2_PF24",
+"ZCPD_VAL_PLAN"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL31",
+"/CPD/PFP_M_A2_FIL01",
+"ZCPD_LUMIRA_PLAN"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPD_VAL"
+],
+"queries": []
+},
+"ZCPD_REPOST_DATE": {
+"functions": [
+"ZCPD_ADJ_START_DATE",
+"ZCPD_DEL_DATA_F00",
+"ZCPD_ADJ_END_DATE",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_REPOST_DATE_FIL01",
+"ZCPD_DEL_DATA_FIL04",
+"ZCPD_REPOST_DATE_FIL02",
+"ZCPD_DEL_DATA_FIL05",
+"ZCPD_PFP_M_A4_FIL91_SE",
+"ZCPD_PFP_M_A4_FIL91_N",
+"ZCPD_PFP_PLAN",
+"ZCPD_PFP_M_A2_FIL01_SE",
+"ZCPDFFLVL_FIL01_SE_N",
+"ZCPD_PFP_M_A2_FIL03_SE"
+],
+"aggr": [
+"ZCPD_DEL",
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZCPD_REPOST_DOMAIN": {
+"functions": [
+"ZCPD_PFP_REPOST_DMN"
+],
+"filters": [
+"ZCPD_PFP_FILTER_DMN02"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZCPD_REPOST_PS": {
+"functions": [
+"ZCPD_REPOST"
+],
+"filters": [
+"ZCPD_REPOST_FIL"
+],
+"aggr": [
+"ZCPD_ALL"
+],
+"queries": []
+},
+"ZCPD_RRCOST_PS01": {
+"functions": [
+"ZCPD_PLAN_FF_ARR_PF1",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_RR_COST_FIL01",
+"/CPD/PFP_M_A3_FIL021_N"
+],
+"aggr": [
+"ZCPD_RR",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_RR_COST_PS01": {
+"functions": [
+"ZCPD_PLAN_FF_ARR_PF1"
+],
+"filters": [
+"ZCPD_RR_COST_FIL01"
+],
+"aggr": [
+"ZCPD_RR"
+],
+"queries": []
+},
+"ZCPD_RR_UPDATE": {
+"functions": [
+"ZCPD_PLAN_RR_PF1"
+],
+"filters": [
+"ZCPD_RR2_FILTER_FIL01"
+],
+"aggr": [
+"ZCPD_RR2"
+],
+"queries": []
+},
+"ZCPD_RR_UPDT01": {
+"functions": [
+"ZCPD_PLAN_RR_PF1"
+],
+"filters": [
+"ZCPD_RR2_FILTER_FIL01"
+],
+"aggr": [
+"ZCPD_RR2"
+],
+"queries": []
+},
+"ZCPD_RR_UPDT02": {
+"functions": [
+"ZCPD_PLAN_RR_PF1"
+],
+"filters": [
+"ZRRR_FIL01"
+],
+"aggr": [
+"ZCPD_RR2"
+],
+"queries": []
+},
+"ZCPD_STAFFING_UPD": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_LUMIRA_FCST_N",
+"ZCPD_LUMIRA_FCST_M",
+"ZCPD_PFP_M_A3_FIL03_N"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_STAFFING_UPDTST": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_LUMIRA_FCST_N",
+"ZCPD_LUMIRA_FCST_M",
+"ZCPD_PFP_M_A3_FIL03_N"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZCPD_SYNC_FORECASTPS": {
+"functions": [
+"ZCPD_PFP_M_A4_PF16",
+"/CPD/PFP_M_A2_PF06",
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL94",
+"ZCPD_PFP_M_A2_FIL01_SE2",
+"ZCPDFFLVL_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZCPD_VAL_ONDEMAND": {
+"functions": [
+"ZCPD_VAL_PLAN",
+"ZCPD_VAL_FCST"
+],
+"filters": [
+"ZCPD_LUMIRA_PLAN",
+"ZCPD_LUMIRA_FCST"
+],
+"aggr": [
+"ZCPD_VAL",
+"ZCPD_FCST"
+],
+"queries": []
+},
+"ZCPD_VAL_PS": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_PLAN"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"ZCPD_VAL"
+],
+"queries": []
+},
+"ZCPD_VAL_PS_BP": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14_1",
+"ZCPD_VAL_FCST",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_BP_GENERATE",
+"ZCPD_VAL_PLAN",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91_1",
+"ZCPD_PFP_M_A4_FIL05_2",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_M_A4_FIL05_1",
+"ZCPD_PFP_M_A4_FIL20_1",
+"ZCPD_PFP_PLAN",
+"ZCPD_PFP_M_A2_FIL01_1",
+"ZCPDFFLVL_FIL01_1",
+"ZCPD_PFP_M_A4_FIL04_1"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_M_A1",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZCPD_VAL_PS_N": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14_1",
+"ZCPD_VAL_FCST",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_VAL_PLAN",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91_1",
+"ZCPD_PFP_M_A4_FIL05_2",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_M_A4_FIL05_1",
+"ZCPD_PFP_PLAN",
+"ZCPD_PFP_M_A2_FIL01_1",
+"ZCPDFFLVL_FIL01_1_LD",
+"ZCPD_PFP_M_A4_FIL04_1_LD"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_M_A1",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZCPD_VAL_PS_N_LD": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14_1",
+"ZCPD_VAL_FCST",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_VAL_PLAN",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91_LD",
+"ZCPD_PFP_M_A4_FIL05_2_LD",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_M_A4_FIL05_1_LD",
+"ZCPD_PFP_PLAN",
+"ZCPD_PFP_M_A2_FIL01_1_LD",
+"ZCPDFFLVL_FIL01_1_LD",
+"ZCPD_PFP_M_A4_FIL04_1_LD"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_M_A1",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZCPD_ZAVR_APO_PS01": {
+"functions": [
+"ZPF_ZAVR_APO_GC",
+"ZCPD_ZAVR_APO_PF01",
+"ZCPD_SUNIT_QT_CHECK",
+"ZCPD_ZAVR_APO_PFF02"
+],
+"filters": [
+"ZAVR_APO_FIL01"
+],
+"aggr": [
+"ZAVR_APO"
+],
+"queries": []
+},
+"ZCPD_ZAVR_APO_PS02_D": {
+"functions": [
+"ZCPD_SUBCON_UNIT_PRE",
+"ZPF_ZAVR_APO_REM"
+],
+"filters": [
+"ZAVR_APO_FIL02"
+],
+"aggr": [
+"ZAVR_APO"
+],
+"queries": []
+},
+"ZCPD_ZAVR_AP_PS1_T": {
+"functions": [
+"ZPF_ZAVR_APO_GC",
+"ZCPD_ZAVR_APO_PF01",
+"ZCPD_SUNIT_QT_CHECK",
+"ZCPD_ZAVR_APO_PF2_T",
+"ZKD_LUMIRA_CUBD_CHEK"
+],
+"filters": [
+"ZAVR_APO_FIL01"
+],
+"aggr": [
+"ZAVR_APO"
+],
+"queries": []
+},
+"ZDELALL": {
+"functions": [
+"ZDELALL"
+],
+"filters": [
+"ZDELALL"
+],
+"aggr": [
+"ZDELALL"
+],
+"queries": []
+},
+"ZDELETE": {
+"functions": [
+"ZDELETE"
+],
+"filters": [
+"ZDELETE"
+],
+"aggr": [
+"ZDELETE"
+],
+"queries": []
+},
+"ZDELETE2": {
+"functions": [
+"ZDELETE2"
+],
+"filters": [
+"ZALLDATA"
+],
+"aggr": [
+"ZALLDATA"
+],
+"queries": []
+},
+"ZDEL_ALL": {
+"functions": [
+"ZDEL_ALL"
+],
+"filters": [
+"ZDEL_ALL"
+],
+"aggr": [
+"ZDEL_ALL"
+],
+"queries": []
+},
+"ZDPS_PFP_M_PLAN_GROW": {
+"functions": [
+"ZDPS_PFP_M_A2_PF05",
+"ZDPS_PFP_MEASURES"
+],
+"filters": [
+"ZTEST_PFP_M_A2_FIL02"
+],
+"aggr": [
+"ZPLN_M_A2"
+],
+"queries": []
+},
+"ZDV_CALC": {
+"functions": [
+"ZDV_CALC3"
+],
+"filters": [
+"ZDV_FLTR03"
+],
+"aggr": [
+"ZDV_M_P3"
+],
+"queries": []
+},
+"ZDV_VALID": {
+"functions": [
+"ZDV_VALID3"
+],
+"filters": [
+"ZDV_FLTR03"
+],
+"aggr": [
+"ZDV_M_P3"
+],
+"queries": []
+},
+"ZEXPTEST": {
+"functions": [
+"ZCPD_PICM_PF01",
+"ZEXPTEST",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCRGRMID",
+"ZCOPYFIL",
+"ZCPD_PFP_M_A4_FIL91_SE1",
+"ZCPD_PFP_M_A4_FIL91_N1",
+"ZCPD_PFP_PLAN1",
+"ZCPDFFLVL_FIL01",
+"/CPD/PFP_M_A3_FIL021"
+],
+"aggr": [
+"ZCOPYLVL",
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZEXPTEST_DB": {
+"functions": [
+"ZCOPY_CR_TO_DB_FCR",
+"ZEXPTEST_DB",
+"ZCOPY_FF_REVENUE",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCOPYFIL_N_1",
+"ZCOPYFIL",
+"ZCOPYFIL_N_2",
+"ZCPDFFLVL_FIL01",
+"/CPD/PFP_M_A3_FIL021"
+],
+"aggr": [
+"ZCOPYLVL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZFORECASTTEST1": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14",
+"/CPD/PFP_M_A4_PF07",
+"ZCPD_PFP_M_A4_PF11"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91",
+"ZCPD_PFP_M_A4_FIL05",
+"ZCPD_PFP_M_A4_FIL99"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZFORECASTTEST2": {
+"functions": [
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZKDTEST": {
+"functions": [
+"ZKD_PFP_COPY_SUBCON"
+],
+"filters": [
+"ZCPD_PFP_M_A4_VN"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZKD_DECO_TEST": {
+"functions": [
+"ZKD_COPY_PF05"
+],
+"filters": [
+"ZKD_PFP_M_A4_FIL15"
+],
+"aggr": [
+"ZKD_M_A4"
+],
+"queries": []
+},
+"ZKD_DPS_PLAN_VAL": {
+"functions": [
+"ZKD_COPY_UNITS_PLAN",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN"
+],
+"filters": [
+"ZCOPY_UNITS_FIL01",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_PLAN"
+],
+"aggr": [
+"ZPLAN_ALL",
+"ZCPD_FCST",
+"ZCPD_VAL"
+],
+"queries": []
+},
+"ZKD_LUMIRA_SUBMIT": {
+"functions": [
+"ZPF_ZAVR_APO_GC",
+"ZCPD_ZAVR_APO_PF01",
+"ZCPD_SUNIT_QT_CHECK",
+"ZKD_LUMIRA_SUBMIT_PF"
+],
+"filters": [
+"ZAVR_APO_FIL01"
+],
+"aggr": [
+"ZAVR_APO"
+],
+"queries": []
+},
+"ZKD_TEST_BULKFCAST": {
+"functions": [
+"ZCPD_DELEKF_FORECAST",
+"ZCPD_PFP_M_A4_PF05",
+"ZCPD_EDITKF_FORECAST",
+"ZCPD_PFP_M_A2_PF26"
+],
+"filters": [
+"ZKDTEST_FORECAST_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZNWS_FLOWDATE_REPOST": {
+"functions": [
+"ZNWS_FLOWDATE_REPOST"
+],
+"filters": [
+"Z_NWS_DEL_02"
+],
+"aggr": [
+"Z_NWS_DEL"
+],
+"queries": []
+},
+"ZNWS_REPOST_DOMAIN": {
+"functions": [
+"ZNWS_PFP_REPOST_DMN"
+],
+"filters": [
+"Z_FIL_NWS_UPD_DMN"
+],
+"aggr": [
+"Z_NWS_DEL"
+],
+"queries": []
+},
+"ZPFP_DB_A_PS01": {
+"functions": [
+"ZPFP_DB_A_PF6",
+"ZPFP_DB_A_PF1",
+"ZPFP_DB_A_PF2",
+"ZPFP_DB_A_PF5",
+"ZPFP_DB_A_PF4",
+"ZPFP_DB_A_PF3"
+],
+"filters": [
+"ZPFP_DB_A_F1",
+"ZPFP_DB_A_F2",
+"ZPFP_DB_A_F12",
+"ZPFP_DB_A_F3",
+"ZPFP_DB_A_F4",
+"ZPFP_DB_A_F5",
+"ZPFP_DB_A_F6"
+],
+"aggr": [
+"ZPFP_DB_A"
+],
+"queries": []
+},
+"ZPFP_DB_A_PS02": {
+"functions": [
+"ZPFP_DB_A_PF2",
+"ZPFP_DB_A_PF5",
+"ZPFP_DB_A_PF4",
+"ZPFP_DB_A_PF3"
+],
+"filters": [
+"ZPFP_DB_A_F2",
+"ZPFP_DB_A_F7",
+"ZPFP_DB_A_F8",
+"ZPFP_DB_A_F9",
+"ZPFP_DB_A_F10",
+"ZPFP_DB_A_F11"
+],
+"aggr": [
+"ZPFP_DB_A"
+],
+"queries": []
+},
+"ZPICM_DEL_DEMAND": {
+"functions": [
+"ZPICM_CHECK_ACTUALS",
+"ZPICM_CHECK_DEMAND",
+"ZPICM_DEL_DEMAND"
+],
+"filters": [
+"ZPICM_CHECK_ACTUALS",
+"ZPICM_CHECK_DEMAND",
+"ZPICM_DEL_DEMAND"
+],
+"aggr": [
+"ZCPD_M_A1",
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZPICM_INS_DEMAND": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF20"
+],
+"filters": [
+"ZPICM_INS_DEMAND"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZPLTEST": {
+"functions": [
+"ZPLTEST"
+],
+"filters": [
+"ZPLTEST"
+],
+"aggr": [
+"ZCOPYLVL"
+],
+"queries": []
+},
+"ZPSTEST": {
+"functions": [
+"ZCPD_PFP_COPY_PFKD"
+],
+"filters": [
+"ZCPD_PFP_M_A4_VN"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZPSTEST123": {
+"functions": [
+"ZSUBCON_RETEST"
+],
+"filters": [
+"ZCPD_PFP_M_A4_VN"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZPSTEST222": {
+"functions": [
+"ZTEST_PO_HASH",
+"ZTEST_PO_HASH_MUL"
+],
+"filters": [
+"ZCPD_PFP_M_A4_VN"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZPSTEST_GRC": {
+"functions": [
+"ZCPD_PFP_COPY_GRC"
+],
+"filters": [
+"ZCPD_PFP_M_A4_VN"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZPSTEST_VN": {
+"functions": [
+"ZCPD_PFP_COPY_PF_VN"
+],
+"filters": [
+"ZCPD_PFP_M_A4_VN"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZPS_DATE_TIME_PS02": {
+"functions": [
+"ZTEST_DELETE",
+"ZCPD_READ_TIMSTMPPF1",
+"ZTEST_KF"
+],
+"filters": [
+"ZA_DATE_FIL06",
+"ZA_DATE_FIL05"
+],
+"aggr": [
+"ZA_CPDATE"
+],
+"queries": []
+},
+"ZPS_DATE_TIME_PS03": {
+"functions": [
+"ZCPD_DELETE_TIMESTMP",
+"ZCPD_READ_TIMSTMPPF1",
+"ZCPD_SETKF_TIMESTMP"
+],
+"filters": [
+"ZA_DATE_FIL06",
+"ZA_DATE_FIL05"
+],
+"aggr": [
+"ZA_CPDATE"
+],
+"queries": []
+},
+"ZPS_M_PLAN_GROW": {
+"functions": [
+"ZPF_ZPF_M_A2",
+"ZPF_MEASURES"
+],
+"filters": [
+"ZPF_M_A2_FIL012"
+],
+"aggr": [
+"ZPF_M_A2"
+],
+"queries": []
+},
+"ZPS_NBUE_COST_DEL": {
+"functions": [
+"ZPF_NBUE_CST_DEL"
+],
+"filters": [
+"ZCPD_PFP_M_A2_NBUE"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZPS_NBUE_COST_VAL": {
+"functions": [
+"ZPF_NBUE_SET",
+"ZPF_NBUE_COST"
+],
+"filters": [
+"ZCPD_PFP_M_A2_NBUE"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZPS_TEST_KD": {
+"functions": [
+"ZTEST_REPOST_KD"
+],
+"filters": [
+"ZKD_FIL_TEST"
+],
+"aggr": [
+"ZTEST"
+],
+"queries": []
+},
+"ZREPOST": {
+"functions": [
+"ZREPOST"
+],
+"filters": [
+"ZREPOST"
+],
+"aggr": [
+"ZREPOST"
+],
+"queries": []
+},
+"ZRTEST": {
+"functions": [
+"ZCOPY_CR_TO_DB_FCR",
+"ZRTEST",
+"ZCOPY_FF_REVENUE",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCOPYFIL_N_1",
+"ZCOPYFIL",
+"ZCOPYFIL_N_2",
+"ZCPDFFLVL_FIL01",
+"/CPD/PFP_M_A3_FIL021"
+],
+"aggr": [
+"ZCOPYLVL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZSPLIT_FISCP_CALM": {
+"functions": [
+"ZSPLIT_FISCP_CALM"
+],
+"filters": [
+"/CPD/PFP_M_A3_FIL02_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZSYNC_UNIT": {
+"functions": [
+"ZSYNC_UNITS"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL13"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZTEST": {
+"functions": [
+"/CPD/PFP_M_A2_PF06",
+"Z_DELETE_PLAN_RATES"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01",
+"ZTEST2"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZTEST2": {
+"functions": [
+"ZTEST2"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL05"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZTESTR": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1",
+"ZCOPY_PLAN_PLUS_CR_M",
+"ZCOPY_FF_REVENUE",
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCOPYFIL_N_1",
+"ZCOPYFIL",
+"ZCOPYFIL_N_2",
+"ZCPDFFLVL_FIL01"
+],
+"aggr": [
+"ZCOPYLVL",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"ZTEST_LAB": {
+"functions": [
+"ZCPD_PFP_M_A4_PF05",
+"ZCPD_EDITKF_FORECAST",
+"ZCPD_PFP_M_A2_PF26",
+"ZCPD_VAL_FCST",
+"ZCPD_DELEKF_FORECAST"
+],
+"filters": [
+"Z_FORECAST_EDIT_FILTER",
+"ZCPD_LUMIRA_FCST",
+"Z_FORECAST_DEL_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_FCST"
+],
+"queries": []
+},
+"ZTEST_LOCKING": {
+"functions": [
+"ZTEST_DUMMY_PF"
+],
+"filters": [
+"ZTEST_LOCK_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZTEST_M_PLAN_BULK": {
+"functions": [
+"ZCPD_PFP_M_A2_PF34",
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF01",
+"ZCPD_PFP_SET_HRS_N",
+"ZCPD_PFP_M_A2_PF24",
+"ZCPD_VAL_PLAN"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL31",
+"/CPD/PFP_M_A2_FIL01",
+"ZCPD_LUMIRA_PLAN"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPD_VAL"
+],
+"queries": []
+},
+"ZTEST_M_UPDT_PS01": {
+"functions": [
+"ZTEST_M_UPDT_PF02",
+"ZTEST_M_UPDATE_PF01"
+],
+"filters": [
+"ZTEST_M_UPDT_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZTEST_NOTSTAFFED": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"ZTEST_PFP_P_DPS_EDIT": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"ZCPD_PFP_SET_HRS",
+"ZCPD_VAL_PLAN"
+],
+"filters": [
+"ZCPD_PFP_P_DPS_FIL01",
+"ZCPD_LUMIRA_PLAN"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPD_VAL"
+],
+"queries": []
+},
+"ZTEST_PICM": {
+"functions": [
+"ZTEST_PICM"
+],
+"filters": [
+"ZTEST_PICM"
+],
+"aggr": [
+"ZCOPYLVL"
+],
+"queries": []
+},
+"ZTEST_PLAN2_THREPOST": {
+"functions": [
+"/CPD/PFP_M_A2_PF01",
+"ZCPD_PFP_SET_HRS",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"Z_CHECK_PLAN_DATA"
+],
+"filters": [
+"ZDPS_PFP_P_THRESHOLD",
+"ZCPD_PFP_PLAN",
+"ZCPDFFLVL_FIL01_SE",
+"ZCPDPLAN_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"ZCPDPLAN"
+],
+"queries": []
+},
+"ZTEST_PS": {
+"functions": [
+"ZTEST_PLANNING"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZTEST_SEQUENCE": {
+"functions": [
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A2_RRID"
+],
+"filters": [
+"ZTEST_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"ZTEST_SK_NPC_PS01": {
+"functions": [
+"ZCPD_PFP_M_A2_PF28"
+],
+"filters": [
+"ZTEST_SK_M_A2_FIL05"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"ZTEST_SK_PLAN_PS01": {
+"functions": [
+"ZTEST_ZPLAN_ALL_PF01",
+"ZTEST_ZPLAN_ALL_PF06"
+],
+"filters": [
+"ZTEST_SK_PLAN_ALL_FIL02"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"ZTEST_ZCPD_RR_PS01": {
+"functions": [
+"ZTEST_ZCPD_RR_PF01",
+"ZTEST_ZCPD_RR_PF06"
+],
+"filters": [
+"ZTEST_ZCPD_RR_FIL02"
+],
+"aggr": [
+"ZCPD_RR"
+],
+"queries": []
+},
+"ZVR_TEST": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"ZCPD_PFP_M_A2_PF20",
+"ZCPD_PFP_M_A2_PF24",
+"ZVR_TEST"
+],
+"filters": [
+"/CPD/PFP_M_A2_FIL01",
+"ZCPD_PFP_M_A2_NBUE"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_ADJUST_FF_REV": {
+"functions": [
+"Z_ADJUST_FF_REVENUE"
+],
+"filters": [
+"Z_ADJUST_FFREV_FIL"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"Z_BULK_PLAN_PROTOTYP": {
+"functions": [
+"Z_BULK_PLAN_PROTTYP",
+"Z_PFN_BLK_PROTOTYPE"
+],
+"filters": [
+"Z_BULK_PLAN_PROTOTYPE"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_CHECK_PLAN_DATA": {
+"functions": [
+"Z_CHECK_PLAN_DATA"
+],
+"filters": [
+"ZCPDPLAN_FIL01"
+],
+"aggr": [
+"ZCPDPLAN"
+],
+"queries": []
+},
+"Z_CLSD_DOM_REPST": {
+"functions": [
+"ZCPD_PFP_REPOST_DMN"
+],
+"filters": [
+"ZCPD_PFP_FILTER_DMN02"
+],
+"aggr": [
+"ZPLAN_ALL"
+],
+"queries": []
+},
+"Z_COPYEAC_TST": {
+"functions": [
+"ZCPD_PFP_M_A4_PF16",
+"ZCPD_AGG1_PF1",
+"ZCPD_AGG1_PF2",
+"ZCPD_PFP_COPY_PF03",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL12",
+"ZCPD_AGG1_FIL01",
+"ZCPD_AGG1_FIL02",
+"ZCPD_PFP_FILTER_FIL15",
+"ZCPD_VAL_FL01",
+"ZCPDFFLVL_FIL03",
+"ZCPD_PFP_M_A3_FIL05"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_AGG1",
+"ZPLAN_ALL",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_COPY_CR_TEST": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1",
+"ZCOPY_PLAN_TEST",
+"ZCOPY_FF_REVENUE"
+],
+"filters": [
+"ZCOPYFIL_N_1",
+"ZCOPYFIL",
+"ZCOPYFIL_N_2"
+],
+"aggr": [
+"ZCOPYLVL"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN": {
+"functions": [
+"ZCPD_PICM_PF01",
+"ZCOPY_PLAN_PLUS_CR_1",
+"ZCOPY_CR_PLANSUBUNI1",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCRGRMID_N",
+"ZCOPYFIL_N",
+"ZCOPYLVL2_N3",
+"ZCPD_PFP_M_A4_FIL91_SE1_N",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_PLAN",
+"ZCPDFFLVL_FIL01_N1",
+"/CPD/PFP_M_A3_FIL021_N"
+],
+"aggr": [
+"ZCOPYLVL",
+"ZCOPYLVL2",
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_01": {
+"functions": [
+"ZCPD_PICM_PF01",
+"ZCOPY_PLAN_PLUS_CR_N",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCRGRMID",
+"ZCOPYFIL_N_3",
+"ZCPD_PFP_M_A4_FIL91",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_PLAN",
+"ZCPDFFLVL_FIL01"
+],
+"aggr": [
+"ZCOPYLVL",
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_02": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1",
+"ZCOPY_PLAN_PLUS_CR_N",
+"ZCOPY_FF_REVENUE"
+],
+"filters": [
+"ZCOPYFIL_N_1",
+"ZCOPYFIL_N_3",
+"ZCOPYFIL_N_2"
+],
+"aggr": [
+"ZCOPYLVL"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_M": {
+"functions": [
+"ZCPD_PICM_PF01",
+"ZCOPY_CR_TO_CFP_N",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCRGRMID_N",
+"ZCOPYFIL_N",
+"ZCPD_PFP_M_A4_FIL91_SE1_N",
+"ZCPD_PFP_M_A4_FIL91_N1_N",
+"ZCPD_PFP_PLAN1_N",
+"ZCPDFFLVL_FIL01_N1",
+"/CPD/PFP_M_A3_FIL021_N"
+],
+"aggr": [
+"ZCOPYLVL",
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_M1": {
+"functions": [
+"ZCPD_PICM_PF01",
+"ZCOPY_PLAN_PLUS_CR",
+"/CPD/PFP_M_A2_PF06",
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCRGRMID",
+"ZCOPYFIL",
+"ZCPD_VALUATION_FILTER",
+"ZCPDFFLVL_FIL01"
+],
+"aggr": [
+"ZCOPYLVL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_M2": {
+"functions": [
+"ZCOPY_CR_TO_DB_FCR",
+"ZCOPY_CR_TO_DB_FCR2",
+"ZCOPY_CR_TO_DB_FCR3",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCOPYFIL_N_1_N",
+"ZCOPYFIL_N",
+"ZCPDFFLVL_FIL01_N1",
+"/CPD/PFP_M_A3_FIL021_N"
+],
+"aggr": [
+"ZCOPYLVL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_M3": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1",
+"ZCOPY_CR_TO_CB_DB_2",
+"ZCOPY_FF_REVENUE"
+],
+"filters": [
+"ZCOPYFIL_N_1",
+"ZCOPYFIL",
+"ZCOPYFIL_N_2"
+],
+"aggr": [
+"ZCOPYLVL"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_MS": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1",
+"ZCOPY_PLAN_PLUS_CR_M",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCOPYFIL_N_1_N",
+"ZCOPYFIL_N",
+"ZCPDFFLVL_FIL01_N1",
+"/CPD/PFP_M_A3_FIL021_N"
+],
+"aggr": [
+"ZCOPYLVL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_N": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1",
+"ZCOPY_PLAN_PLUS_CR_1",
+"ZCOPY_FF_REVENUE",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCOPYFIL_N_1_N",
+"ZCOPYFIL_N",
+"ZCOPYFIL_N_2_N",
+"/CPD/PFP_M_A3_FIL021_N"
+],
+"aggr": [
+"ZCOPYLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_N2": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1",
+"ZCOPY_PLAN_PLUS_CR_1",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCOPYFIL_N_1_N",
+"ZCOPYFIL_N",
+"ZCPDFFLVL_FIL01_N1",
+"/CPD/PFP_M_A3_FIL021_N"
+],
+"aggr": [
+"ZCOPYLVL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_NT": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1"
+],
+"filters": [
+"ZCOPYFIL_N_1_T"
+],
+"aggr": [
+"ZCOPYLVL"
+],
+"queries": []
+},
+"Z_COPY_CR_TO_PLAN_RG": {
+"functions": [
+"ZCOPY_CR_TO_CB_DB_1",
+"ZCOPY_PLAN_PLUS_CR_R"
+],
+"filters": [
+"ZCOPYFIL_N_1",
+"ZCOPYFIL"
+],
+"aggr": [
+"ZCOPYLVL"
+],
+"queries": []
+},
+"Z_COPY_FCAST_AMT_EM": {
+"functions": [
+"Z_COPY_FORECAST_QTY"
+],
+"filters": [
+"Z_COPY_FORECAST_QTY_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_COPY_FORECAST_AMT": {
+"functions": [
+"Z_COPY_FORECAST_AMT"
+],
+"filters": [
+"Z_COPY_FORECAST_QTY_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_COPY_FORECAST_QTY": {
+"functions": [
+"Z_COPY_FORECAST_QTY"
+],
+"filters": [
+"Z_COPY_FORECAST_QTY_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_COPY_PLAN_AMT_EM": {
+"functions": [
+"Z_COPY_PLAN_AMT_EM"
+],
+"filters": [
+"Z_COPY_PLAN_QTY_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_COPY_PLAN_QTY": {
+"functions": [
+"Z_COPY_PLAN_QTY"
+],
+"filters": [
+"Z_COPY_PLAN_QTY_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_COPY_VERSION": {
+"functions": [
+"Z_COPY_VER"
+],
+"filters": [
+"Z_COPY_FILTER"
+],
+"aggr": [
+"Z_COPYVER"
+],
+"queries": []
+},
+"Z_CPD_COPYEAC_TO_CFP": {
+"functions": [
+"ZCPD_PFP_M_A4_PF16",
+"ZCPD_PFP_COPY_PF04",
+"ZCPD_COPY_ZUNI_PF",
+"ZCPD_PFP_COPY_PF05",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL12",
+"ZCPD_PFP_M_A4_FIL14",
+"ZCPD_PFP_M_A4_FIL13",
+"ZCPD_PFP_M_A4_FIL15",
+"ZCPD_VAL_FL01",
+"ZCPDFFLVL_FIL03",
+"ZCPD_PFP_M_A3_FIL05"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_CPD_SYNC_FCST_NEW": {
+"functions": [
+"Z_SYNC_FCST_TO_PLAN"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL94"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_CPD_SYNC_FORECAST": {
+"functions": [
+"ZCPD_PFP_M_A4_PF16",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL94",
+"ZCPD_PFP_M_A2_FIL01_NEW",
+"ZCPDFFLVL_FIL02",
+"ZCPD_PFP_M_A3_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_CPD_SYNC_FORE_TEST": {
+"functions": [
+"ZCPD_PFP_M_A4_PF16",
+"/CPD/PFP_M_A2_PF06",
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL94",
+"ZCPD_PFP_M_A2_FIL01_SE2",
+"ZCPDFFLVL_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_CPD_SYNC_F_TMECIF": {
+"functions": [
+"ZCPD_PFP_M_A4_PF16",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL94_1",
+"ZCPD_PFP_M_A2_FIL01_NEW",
+"ZCPDFFLVL_FIL02",
+"ZCPD_PFP_M_A3_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_CUTOVER_FF_FORECA": {
+"functions": [
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_CUTOVER_FF_RECALC": {
+"functions": [
+"Z_DELETE_FF_REVENUE",
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"Z_DELETE_FF_REV_FIL01",
+"Z_DELETE_FF_REV_FIL02",
+"ZCPDFFLVL_FIL01"
+],
+"aggr": [
+"ZALLDATA",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_DPS_POST_PS01_SE1": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_PLAN",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91_SE",
+"ZCPD_PFP_PLAN",
+"ZCPD_PFP_M_A2_FIL01_SE",
+"ZCPDFFLVL_FIL01_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_VAL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_DUMMY_STAFFING": {
+"functions": [
+"ZCPD_PFP_M_A4_PF10"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_DV_DEL_01": {
+"functions": [
+"ZDV_DEL2",
+"ZDV_DEL3"
+],
+"filters": [
+"ZDV_DEL2",
+"ZDV_DEL3"
+],
+"aggr": [
+"ZDV_M_P2",
+"ZDV_M_P3"
+],
+"queries": []
+},
+"Z_EAC_CALC": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14",
+"ZCPD_VAL_FCST",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91",
+"ZCPD_PFP_M_A4_FIL05",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_M_A4_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_FCST"
+],
+"queries": []
+},
+"Z_EAC_CALC_NEW": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14",
+"ZCPD_VAL_FCST",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_PFP_M_A4_PF96",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZSTR_ELM_CHG1",
+"ZSTR_ELM_CHG2",
+"ZSTR_ELM_CHG3",
+"ZSTR_ELM_CHG5",
+"ZSTR_ELM_CHG6"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_EAC_CALC_SE": {
+"functions": [
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14",
+"/CPD/PFP_M_A4_PF07",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL91_SE",
+"ZCPD_PFP_M_A4_FIL05_SE",
+"ZCPD_PFP_M_A4_FIL99_SE",
+"ZCPD_PFP_M_A4_FIL04_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_EAC_CALC_SEQ3": {
+"functions": [
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_EAC_CALC_SE_1": {
+"functions": [
+"ZCPD_SUBCON_QT_CHECK",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14_1",
+"ZCPD_SYNC_FCST_RATE",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL92_SU",
+"ZCPD_PFP_M_A4_FIL91_SE",
+"ZCPD_PFP_M_A4_FIL05_SE_1",
+"ZCPD_PFP_FCST",
+"ZCPD_PFP_M_A4_FIL06_SE",
+"ZCPD_PFP_M_A4_FIL04_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_M_A1",
+"ZCPD_FCST"
+],
+"queries": []
+},
+"Z_FCST_BLK_TST": {
+"functions": [
+"ZCPD_DELEKF_FORECAST"
+],
+"filters": [
+"BLKFRCST_FLTST1"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_FCST_BULK_EDIT": {
+"functions": [
+"ZCPD_PFP_M_A4_PF05",
+"ZCPD_EDITKF_FORECAST"
+],
+"filters": [
+"Z_FORECAST_EDIT_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_FCST_EDIT_LAB2": {
+"functions": [
+"ZCPD_DELEKF_FORECAST",
+"ZCPD_PFP_M_A4_PF05",
+"ZCPD_EDITKF_FORECAST",
+"ZCPD_PFP_M_A2_PF26"
+],
+"filters": [
+"Z_FORECAST_DEL_FILTER",
+"Z_FORECAST_EDIT_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_FCST_EDIT_QTY_LAB": {
+"functions": [
+"ZCPD_DELEKF_FORECAST",
+"ZCPD_PFP_M_A4_PF05",
+"ZCPD_EDITKF_FORECAST",
+"ZCPD_PFP_M_A2_PF26",
+"ZCPD_VAL_FCST"
+],
+"filters": [
+"Z_FORECAST_DEL_FILTER",
+"Z_FORECAST_EDIT_FILTER",
+"ZCPD_LUMIRA_FCST"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_FCST"
+],
+"queries": []
+},
+"Z_FDEL_EDIT_QTY": {
+"functions": [
+"Z_FDEL_EDITKF_QTY1"
+],
+"filters": [
+"Z_FDEL_EDITKF_FIL_QTY"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_FDEL_EDIT_QTY1": {
+"functions": [
+"Z_FDEL_EDITKF_QTY1"
+],
+"filters": [
+"Z_FORECAST_EDIT_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_FF_FORECAST_V1": {
+"functions": [
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL04_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_FF_REV_FORCAST_OLD": {
+"functions": [
+"Z_FF_REV_FORCAST_OLD"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL04_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_FF_REV_PLAN_OLD": {
+"functions": [
+"Z_FF_REV_PLAN_OLD"
+],
+"filters": [
+"ZCPDFFLVL_FIL01_SE"
+],
+"aggr": [
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_FORECAST_EDIT_EM": {
+"functions": [
+"Z_FORECAST_EDIT_QTY",
+"ZCPD_EDITFORECAST_EM"
+],
+"filters": [
+"Z_FORECAST_EDIT_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_FORECAST_EDIT_QTY": {
+"functions": [
+"ZCPD_DELEKF_FORECAST",
+"ZCPD_PFP_M_A4_PF05",
+"ZCPD_EDITKF_FORECAST",
+"ZCPD_PFP_M_A2_PF26"
+],
+"filters": [
+"Z_FORECAST_DEL_FILTER",
+"Z_FORECAST_EDIT_FILTER"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_GRMID_GEN_PS01": {
+"functions": [
+"ZCPD_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_GRM_DEMAND_ID_GEN": {
+"functions": [
+"ZCPD_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL03_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_INSERT_PICM": {
+"functions": [
+"/CPD/PFP_M_A2_PF05",
+"/CPD/PFP_M_A2_PF20"
+],
+"filters": [
+"ZCPD_PFP_M_A2_PICM"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_NWS_CALC": {
+"functions": [
+"Z_NWS_CALC"
+],
+"filters": [
+"Z_NWS_FILTER01"
+],
+"aggr": [
+"ZNWS_M_P2"
+],
+"queries": []
+},
+"Z_NWS_DEL": {
+"functions": [
+"Z_NWS_DEL"
+],
+"filters": [
+"Z_NWS_DEL"
+],
+"aggr": [
+"Z_NWS_DEL"
+],
+"queries": []
+},
+"Z_NWS_DEL_01": {
+"functions": [
+"Z_NWS_DEL"
+],
+"filters": [
+"Z_NWS_DEL_01"
+],
+"aggr": [
+"Z_NWS_DEL"
+],
+"queries": []
+},
+"Z_PLAN_BATCH": {
+"functions": [
+"/CPD/PFP_M_A2_PF06",
+"Z_DELETE_PLAN_RATES",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A2_RRID"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01",
+"/CPD/PFP_M_A3_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_PLAN_BATCH2": {
+"functions": [
+"/CPD/PFP_M_A3_PF04"
+],
+"filters": [
+"/CPD/PFP_M_A3_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_PLAN_FFREV_PS01": {
+"functions": [
+"ZCPD_PLAN_FF_REVNEW"
+],
+"filters": [
+"ZCPDFFNEW_FIL01"
+],
+"aggr": [
+"ZCPDFFNEW"
+],
+"queries": []
+},
+"Z_PLAN_FORECAST_PS1": {
+"functions": [
+"/CPD/PFP_M_A2_PF06",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_PFP_M_A4_PF14",
+"/CPD/PFP_M_A4_PF07",
+"ZCPD_PFP_M_A4_PF11",
+"ZCPD_PFP_M_A4_PF96",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01",
+"ZCPDFFLVL_FIL01",
+"ZCPD_PFP_M_A4_FIL91",
+"ZCPD_PFP_M_A4_FIL05",
+"ZCPD_PFP_M_A4_FIL99",
+"ZCPD_PFP_M_A4_FIL04",
+"/CPD/PFP_M_A3_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A4",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_PLAN_VAL_OPTIMIZED": {
+"functions": [
+"Z_PLAN_VAL_OPTIMIZED",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01",
+"ZCPDFFLVL_FIL01",
+"ZCPD_PFP_M_A2_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_RAO_TEST_FF_REV_1": {
+"functions": [
+"ZCPD_PFP_M_A4_PF96"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL04_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_RAO_TEST_FF_REV_2": {
+"functions": [
+"Z_RAO_ACTUAL_FF_REV"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL04_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_REPOST_BP_DATA": {
+"functions": [
+"Z_REPOST_BP_NEW"
+],
+"filters": [
+"ZCPD_ALL_FIL92"
+],
+"aggr": [
+"ZCPD_ALL"
+],
+"queries": []
+},
+"Z_REPOST_DELLOC_DOM": {
+"functions": [
+"Z_REPOST_DELLOC_DOM"
+],
+"filters": [
+"ZCPD_REPOST_FIL6"
+],
+"aggr": [
+"ZCPD_ALL"
+],
+"queries": []
+},
+"Z_REPOST_DEL_LOC": {
+"functions": [
+"Z_REPOST_DEL_LOC"
+],
+"filters": [
+"ZCPD_REPOST_FIL2"
+],
+"aggr": [
+"ZCPD_ALL"
+],
+"queries": []
+},
+"Z_REPOST_DEL_LOC_N": {
+"functions": [
+"Z_REPOST_DEL_LOC_N"
+],
+"filters": [
+"ZCPD_REPOST_FIL5"
+],
+"aggr": [
+"ZCPD_ALL"
+],
+"queries": []
+},
+"Z_REPOST_FPID": {
+"functions": [
+"Z_REPOST_FPID"
+],
+"filters": [
+"ZCPD_REPOST_FIL4"
+],
+"aggr": [
+"ZCPD_ALL"
+],
+"queries": []
+},
+"Z_REPOST_RES_ITEM_ID": {
+"functions": [
+"Z_REPOST_RES_ITEM_ID"
+],
+"filters": [
+"ZCPD_REPOST_FIL3"
+],
+"aggr": [
+"ZCPD_ALL"
+],
+"queries": []
+},
+"Z_REPOST_RES_LOC": {
+"functions": [
+"Z_REPOST_RES_LOC"
+],
+"filters": [
+"ZCPD_REPOST_FIL1"
+],
+"aggr": [
+"ZCPD_ALL"
+],
+"queries": []
+},
+"Z_REPOST_ROLE_RLOC": {
+"functions": [
+"Z_REP_ROLE_RLOC"
+],
+"filters": [
+"ZCPD_REPOST_PLAN_FIL"
+],
+"aggr": [
+"Z_REP_PLN"
+],
+"queries": []
+},
+"Z_REP_UNI": {
+"functions": [
+"Z_REP_UNI"
+],
+"filters": [
+"Z_REP_UNI"
+],
+"aggr": [
+"Z_REP_UNI"
+],
+"queries": []
+},
+"Z_TEST01": {
+"functions": [
+"ZCPD_DELEKF_FORECAST",
+"ZCPD_PFP_M_A2_PF34"
+],
+"filters": [
+"Z_FORECAST_DEL_FILTER",
+"ZCPD_PFP_M_A2_FIL31"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_TEST02": {
+"functions": [
+"ZTEST01_DEL"
+],
+"filters": [
+"ZTETS1"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_TEST_CASE": {
+"functions": [
+"Z_GEN_COMBINATIONS"
+],
+"filters": [
+"Z_BULK_PLAN_PROTOTYPE"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_TEST_CASE_N": {
+"functions": [
+"ZCPD_PFP_M_A2_PF34",
+"Z_GEN_COMBINATIONS_N",
+"ZCPD_PFP_SET_QTY",
+"ZCPD_PFP_M_A2_PF24"
+],
+"filters": [
+"Z_BULK_PLAN_PROTOTYPE_2",
+"Z_BULK_PLAN_PROTOTYPE"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_TEST_CASE_N_FCST": {
+"functions": [
+"ZCPD_DELEKF_FORECAST",
+"Z_GEN_FCST_COMB_N",
+"ZCPD_EDITKF_FORECAST",
+"ZCPD_PFP_M_A2_PF26"
+],
+"filters": [
+"Z_FORECAST_DEL_PROTOTYPE",
+"Z_FORECAST_PROTOTYPE"
+],
+"aggr": [
+"/CPD/PFP_M_A4"
+],
+"queries": []
+},
+"Z_TEST_EAC_TO_PLAN": {
+"functions": [
+"ZTST_PFP_M_A4_PF16",
+"ZTST_PFP_COPY_PF04",
+"ZCPD_SYNC_EAC_PF02",
+"ZCPD_SYNC_EAC_PF01",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZTEST_PFP_M_A4_FIL94",
+"ZTST_PFP_M_A4_FIL14",
+"ZTEST_PFP_M_A4_FIL13",
+"ZTEST_PFP_M_A4_FIL15",
+"ZTST_PFP_M_A2_FIL01_NEW",
+"ZCPDFFLVL_FIL02",
+"ZTST_PFP_M_A3_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_TEST_SYNC_FORECAST": {
+"functions": [
+"ZCPD_PFP_M_A4_PF16",
+"ZCPD_VAL_PLAN",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL94",
+"ZCPD_PFP_M_A2_FIL01_NEW",
+"ZTEST_LOCK1",
+"ZTEST_LOCK2"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_VAL",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_THRESHOLD_CHECK_P": {
+"functions": [
+"Z_THRESHOLD_CHECK_P"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_VALUATION_DB_FF_SE": {
+"functions": [
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCPDFFLVL_FIL01_SE"
+],
+"aggr": [
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_VALUATION_PS01": {
+"functions": [
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01",
+"ZCPDFFLVL_FIL01",
+"ZCPD_PFP_M_A2_FIL03"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_VALUATION_PS01_N": {
+"functions": [
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01",
+"ZCPDFFLVL_FIL01"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_VALUATION_PS01_NEW": {
+"functions": [
+"/CPD/PFP_M_A2_PF06",
+"ZCPD_PLAN_FF_REVCALC",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01",
+"ZCPDFFLVL_FIL01",
+"/CPD/PFP_M_A3_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+},
+"Z_VALUATION_PS01_SE": {
+"functions": [
+"/CPD/PFP_M_A2_PF06",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL01_SE",
+"ZCPDFFLVL_FIL01_SE",
+"ZCPD_PFP_M_A2_FIL03_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_VALUATION_PS01_SE1": {
+"functions": [
+"ZCPD_SUBCON_QT_CHECK",
+"ZCPD_PFP_M_A4_PF95",
+"ZCPD_VAL_FCST",
+"ZCPD_VAL_PLAN",
+"Z_DELETE_PLAN_RATES",
+"ZCPD_PLAN_FF_REVCALC",
+"ZCPD_PFP_M_A2_PF01"
+],
+"filters": [
+"ZCPD_PFP_M_A4_FIL92_SU",
+"ZCPD_PFP_M_A4_FIL91_SE",
+"ZCPD_PFP_M_A4_FIL91_N",
+"ZCPD_PFP_PLAN",
+"ZCPD_PFP_M_A2_FIL01_SE",
+"ZCPDFFLVL_FIL01_SE",
+"ZCPD_PFP_M_A2_FIL03_SE"
+],
+"aggr": [
+"/CPD/PFP_M_A4",
+"ZCPD_FCST",
+"ZCPD_VAL",
+"/CPD/PFP_M_A2",
+"ZCPDFFLVL"
+],
+"queries": []
+},
+"Z_VALUATION_PS02": {
+"functions": [
+"ZCPD_PICM_VALUATION"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL02"
+],
+"aggr": [
+"/CPD/PFP_M_A2"
+],
+"queries": []
+},
+"Z_VALUATION_PS03": {
+"functions": [
+"ZCPD_PICM_VALUATION2",
+"ZCPD_PICM_COST_RATE",
+"ZCPD_PFP_M_A2_PF30",
+"/CPD/PFP_M_A3_PF04",
+"ZCPD_PFP_M_A3_PF01",
+"ZCPD_PFP_M_A3_PF04"
+],
+"filters": [
+"ZCPD_PFP_M_A2_FIL02",
+"ZCPD_PFP_M_A2_FIL05",
+"ZCPD_PFP_M_A3_FIL04"
+],
+"aggr": [
+"/CPD/PFP_M_A2",
+"/CPD/PFP_M_A3"
+],
+"queries": []
+}
+}
+}
