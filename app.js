@@ -2606,15 +2606,57 @@ function initAssistant() {
     const _byU = {}; (State.objects || []).forEach(o => { _byU[o.name.toUpperCase()] = o; });
     const _obj = _byU[name.toUpperCase()] || {};
     const isPlanning = /Planning Sequence|Planning Function|Filter/i.test(_obj.category || '');
+    const isAbapClass = /Class/i.test(_obj.category || '')
+      || (!_obj.category && /^(\/[A-Z0-9]+\/)?[ZY]/i.test(name) && /CL_|CLASS/i.test(name));
 
-    const sg = isPlanning ? planFocusSubgraph(name) : depSubgraph(name);
+    let sg;
+    if (isPlanning) sg = planFocusSubgraph(name);
+    else if (isAbapClass) sg = depSubgraph(name);      // local reverse (planfunc-class) chains
+    else sg = depSubgraph(name);
     const nodes = new Set(sg.nodes);
     const edges = sg.edges.slice();
     const seen = new Set(edges.map(e => e.source + '>' + e.target));
-    // Live enrichment only for ABAP objects; planning links live fully in the
-    // local snapshot, and pulling live where-used would drag in unrelated
-    // sequences that merely share a filter.
-    if (liveOn && !isPlanning) {
+    const push = (s, t) => {
+      if (!s || !t || s === t) return;
+      const k = s + '>' + t; if (seen.has(k)) return; seen.add(k);
+      nodes.add(s); nodes.add(t); edges.push({ source: s, target: t });
+    };
+    if (isAbapClass) {
+      // deep OUTGOING map: Class -> Methods -> Plan Seq -> Plan Function -> …
+      if (liveOn) {
+        try {
+          const structural = /Planning Sequence|Planning Function|Filter|Aggregation Level|BEx Query|Class|Function Module|Interface|Function Group/i;
+          const candidates = State.objects.filter(o => o.custom && structural.test(o.category || '')).map(o => o.name);
+          const r = await fetch('/api/sap/classmap', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, candidates }),
+          });
+          (await r.json()).edges.forEach(e => push(e.source, e.target));
+        } catch (e) { /* keep local */ }
+      }
+      // reverse: planning functions that call this class (local planfunc-class edges)
+      (State.edges || []).forEach(e => {
+        if (e.kind === 'planfunc-class' && (e.target || '').toUpperCase() === name.toUpperCase())
+          push(e.source, e.target);
+      });
+      const catOf = n => (_byU[n.toUpperCase()] || {}).category || '';
+      // expand each discovered Plan SEQUENCE downward: seq -> functions -> filter/class/FOX
+      // (bounded — planFocusSubgraph on a sequence never fans out to other sequences)
+      [...nodes].filter(n => /Planning Sequence/i.test(catOf(n))).forEach(sq => {
+        planFocusSubgraph(sq).edges.forEach(e => push(e.source, e.target));
+      });
+      // for any Plan FUNCTION reached, add only its downstream (class / FOX / filter),
+      // never its parent sequences (which would explode the graph)
+      [...nodes].filter(n => /Planning Function/i.test(catOf(n))).forEach(fn => {
+        const fu = fn.toUpperCase();
+        (State.edges || []).forEach(e => {
+          if (e.source.toUpperCase() === fu
+              && /planfunc-class|planfunc-fox|planfunc-filter/i.test(e.kind || ''))
+            push(e.source, e.target);
+        });
+      });
+    } else if (liveOn && !isPlanning) {
+      // Live enrichment for other ABAP objects (FM etc.)
       try {
         const g = await fetchLiveGraph(name);
         if (g) {

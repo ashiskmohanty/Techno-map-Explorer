@@ -537,6 +537,84 @@ def api_sap_uses():
         return jsonify({"edges": [], "source": "error", "error": str(e)})
 
 
+@app.route("/api/sap/classmap", methods=["POST"])
+def api_sap_classmap():
+    """Deep OUTGOING structure of an ABAP class: read its source live (ADT GET,
+    read-only) and return edges Class -> Method and Method -> referenced custom
+    object (BW planning sequence / function / filter, FM, other class). The
+    caller then expands any planning object through the local planning chain to
+    render Class -> Method -> Plan Sequence -> Plan Function.
+    """
+    import re as _re
+    payload = request.get_json(silent=True) or {}
+    name = (payload.get("name") or "").strip()
+    candidates = payload.get("candidates") or []
+    if not name:
+        return jsonify({"edges": [], "source": "none"})
+    if not sap_http.is_configured():
+        return jsonify({"edges": [], "source": "offline"})
+    try:
+        src = sap_http.read_source(name)
+    except Exception as e:
+        app.logger.warning("classmap read failed: %s", e)
+        return jsonify({"edges": [], "source": "error", "error": str(e)})
+    if not src:
+        return jsonify({"edges": [], "source": "empty"})
+
+    cand = [(c, c.upper()) for c in candidates
+            if isinstance(c, str) and len(c.strip()) >= 6 and c.upper() != name.upper()]
+    up_all = src.upper()
+    cand = [(c, cu) for (c, cu) in cand if cu in up_all]   # keep only names present
+
+    edges, seen = [], set()
+
+    def add(s, t, kind):
+        if not s or not t or s.upper() == t.upper():
+            return
+        k = (s.upper(), t.upper(), kind)
+        if k in seen:
+            return
+        seen.add(k)
+        edges.append({"source": s, "target": t, "kind": kind})
+
+    # split into METHOD <name>. ... ENDMETHOD blocks (implementation section)
+    lines = src.splitlines()
+    cur, body = None, []
+    blocks = []          # (method_name, body_text)
+    for l in lines:
+        m = _re.match(r"^\s*METHOD\s+([\w~/]+)\s*\.?", l, _re.I)
+        if m and not _re.match(r"^\s*METHODS\b", l, _re.I):
+            cur, body = m.group(1), []
+            continue
+        if _re.match(r"^\s*ENDMETHOD\b", l, _re.I):
+            if cur is not None:
+                blocks.append((cur, "\n".join(body)))
+            cur, body = None, []
+            continue
+        if cur is not None:
+            body.append(l)
+
+    matched_any = False
+    for meth, btext in blocks:
+        bu = btext.upper()
+        refs = [c for (c, cu) in cand if cu in bu]
+        if not refs:
+            continue
+        matched_any = True
+        disp = meth.split("~")[-1]                      # strip interface prefix
+        add(name, disp, "class-method")
+        for r in refs:
+            add(disp, r, "method-uses")
+
+    # references outside any method (class definition / attributes) -> attach to class
+    if not matched_any:
+        for c, cu in cand:
+            add(name, c, "calls")
+
+    _track("classmap", n=len(edges))
+    return jsonify({"edges": edges, "source": "live" if edges else "empty"})
+
+
 @app.route("/api/sap/explain", methods=["POST"])
 def api_sap_explain():
     """Read an object's ABAP source live and return a short, human summary
