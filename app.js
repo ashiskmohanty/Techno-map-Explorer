@@ -31,8 +31,16 @@ const State = {
 /* single source of truth for the header connection dot */
 function setConnDot() {
   const dot = document.getElementById('connDot');
-  const live = isLive();
-  if (dot) dot.classList.toggle('offline', !live);
+  // green ONLY when a live test to SAP MS1 actually succeeded — not merely
+  // because the stored snapshot was once built live (State.data.source).
+  const connected = State.sapConnected === true;
+  if (dot) {
+    dot.classList.toggle('offline', !connected);
+    const pill = document.getElementById('envPill');
+    if (pill) pill.title = connected
+      ? 'SAP MS1 connected — click to manage the connection'
+      : 'SAP MS1 not connected — click to configure / test';
+  }
   updateDepLiveBtn();
 }
 
