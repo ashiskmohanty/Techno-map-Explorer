@@ -2170,6 +2170,13 @@ function initAssistant() {
         || /^(clear|reset|clean|wipe|start over|new chat|clear all)\.?$/.test(s)
         || /\bclear (the )?(chat|response|screen|conversation)\b/.test(s)) return { action: 'clear' };
     if (/^(help|examples?|what can you|how (do|does|to)|guide|usage)\b/.test(s) || s === '?') return { action: 'help' };
+    // impact / where-used analysis
+    if ((/\b(impact|affect|affected|impacted|break|breaks|broken|blast radius|dependenc\w*|dependent)\b/.test(s)
+          && /\b(change|changing|changed|modif\w+|update|updating|updated|delete|deleting|adjust\w*|touch|if i|when i|used|uses|call\w*|of)\b/.test(s))
+        || /^impact\b/.test(s) || /\bimpact analysis\b/.test(s)
+        || /\bwhere[- ]?used\b/.test(s)
+        || /\bwhat (happens|breaks|is impacted|will be impacted|would break)\b/.test(s))
+      return { action: 'impact' };
     if ((/^(add|create|register|insert)\b/.test(s) &&
          /\b(object|abap|bw|fm|function|module|class|query|planning|sequence|filter|infoprovider|repository|tile|local)\b/.test(s))
         || /\badd (an?|new|this)\b.*\bobject\b/.test(s) || s === 'add object') return { action: 'add' };
@@ -2254,6 +2261,142 @@ function initAssistant() {
         addBot('⚠️ ' + esc(res.error || 'Could not add the object.'));
       }
     } catch (e) { addBot('⚠️ Could not reach the backend to save (run python app.py / serve.py).'); }
+  }
+
+  /* ---- IMPACT ANALYSIS: what breaks if I change this object? ---- */
+  function resolveTargetObject(q) {
+    const up = q.toUpperCase();
+    const names = State.objects.map(o => o.name);
+    const byLen = names.slice().sort((a, b) => b.length - a.length);
+    const hit = byLen.find(n => n.length >= 4 && up.includes(n.toUpperCase()));
+    if (hit) return hit;
+    const m = q.match(/(?:\/[A-Z0-9]+\/)?[ZY][A-Z0-9_\/]{2,}/i);
+    if (m) { const t = m[0].toUpperCase(); return names.find(n => n.toUpperCase() === t) || t; }
+    const r = rankObjects(q, 1);
+    return r.length ? r[0].o.name : null;
+  }
+
+  function localImpact(name) {
+    const key = name.toUpperCase();
+    const downAdj = new Map(), upAdj = new Map();
+    const add = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
+    (State.edges || []).forEach(e => {
+      if (!e.source || !e.target) return;
+      add(downAdj, e.source.toUpperCase(), e.target);   // source uses target
+      add(upAdj, e.target.toUpperCase(), e.source);     // target is used by source
+    });
+    const bfs = (adj, out) => {
+      const q = [[key, 0]]; const seen = new Set([key]);
+      while (q.length) {
+        const [n, d] = q.shift();
+        if (d >= 2) continue;
+        (adj.get(n) || []).forEach(m => {
+          const mk = m.toUpperCase();
+          if (mk !== key && !seen.has(mk)) { seen.add(mk); out.add(m); q.push([mk, d + 1]); }
+        });
+      }
+    };
+    const dependents = new Set(), dependencies = new Set();
+    bfs(upAdj, dependents);       // who depends on `name` (impacted)
+    bfs(downAdj, dependencies);   // what `name` depends on
+    return { dependents, dependencies };
+  }
+
+  async function impactAnalysis(displayQ) {
+    const name = resolveTargetObject(displayQ);
+    if (!name) {
+      addBot(`Tell me which object to assess — e.g. <i>“impact if I change ZPS_CPM_VALUATION”</i> or a planning-sequence name.`);
+      return;
+    }
+    const byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
+    const obj = byName[name];
+    const liveOn = !!(State.assistant && State.assistant.searchMs1) && isLive();
+    track('query', { q: displayQ, matched: true, topAcc: 100, live: liveOn });
+
+    const bubble = addBot(`<span class="acheck"><span class="spin"></span> Analysing the impact of changing `
+      + `<b>${esc(name)}</b>${liveOn ? ' (local map + live SAP MS1)' : ' (local map)'}…</span>`);
+
+    const li = localImpact(name);
+    const dependents = new Set([...li.dependents]);
+    let dependencies = new Set([...li.dependencies]);
+
+    if (liveOn) {
+      try {
+        const reqs = [fetch('/api/sap/whereused', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ names: [name] }),
+        }).then(r => r.json()).catch(() => ({ edges: [] }))];
+        if (obj && obj.domain === 'ABAP') {
+          reqs.push(fetch('/api/sap/uses', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ names: [name], candidates: State.objects.filter(o => o.custom).map(o => o.name) }),
+          }).then(r => r.json()).catch(() => ({ edges: [] })));
+        }
+        const [wu, us] = await Promise.all(reqs);
+        (wu.edges || []).forEach(e => {
+          const other = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source;
+          if (other && other.toUpperCase() !== name.toUpperCase()) dependents.add(other);
+        });
+        if (us) (us.edges || []).forEach(e => {
+          const other = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source;
+          if (other && other.toUpperCase() !== name.toUpperCase()) dependencies.add(other);
+        });
+      } catch (e) { /* ignore, keep local */ }
+    }
+    dependents.delete(name);
+    dependencies = new Set([...dependencies].filter(n => !dependents.has(n) && n !== name));
+
+    const grpOf = set => {
+      const items = [...set].map(n => byName[n] || { name: n, domain: /^(?:\/[A-Z0-9]+\/)?[ZY]/i.test(n) ? 'ABAP' : '?', category: 'Object' });
+      return {
+        items,
+        abap: items.filter(o => o.domain === 'ABAP'),
+        bw: items.filter(o => o.domain === 'BW'),
+        other: items.filter(o => o.domain !== 'ABAP' && o.domain !== 'BW'),
+      };
+    };
+    const D = grpOf(dependents), U = grpOf(dependencies);
+
+    const objLink = o => `<a class="rn open2" data-name="${esc(o.name)}">`
+      + `<i class="dotd" style="background:${nodeColor(o.category)}"></i>${esc(o.name)}</a>`
+      + (o.category && o.category !== 'Object' ? `<span class="rc">${esc(o.category)}</span>` : '');
+    const block = grp => {
+      const g = (label, arr) => arr.length
+        ? `<div class="impgrp"><span class="impgl">${label} · ${arr.length}</span>${arr.slice(0, 40).map(objLink).join('')}</div>` : '';
+      return g('ABAP', grp.abap) + g('BW-IP', grp.bw) + g('Other', grp.other);
+    };
+
+    const cats = new Set([...D.items, ...U.items].map(o => o.category));
+    const checks = [];
+    if ([...cats].some(c => /Planning Sequence|Planning Function|Filter|Aggregation/.test(c)))
+      checks.push('Re-run the affected <b>planning sequences / functions</b> and reconcile the plan figures before vs. after the change.');
+    if ([...cats].some(c => /BEx Query|InfoProvider|InfoObject/.test(c)))
+      checks.push('Validate the linked <b>BEx queries</b> (key figures, variables, restricted/calculated columns, authorizations) still return correct numbers.');
+    if ([...cats].some(c => /Function Module|Class|Interface|Program|Method|Table/.test(c)))
+      checks.push('Unit-test the <b>ABAP callers</b>, re-run <b>where-used (SE80 / ADT)</b>, and transport all impacted objects together.');
+    checks.push('Inform the owners of the impacted <b>process tiles</b> and add these objects to the regression / cut-over scope.');
+    if (!liveOn) checks.push('Turn on <b>🌐 Search SAP MS1 live</b> below for a complete, code-level where-used from the live system.');
+
+    const where = obj ? `a <b>${esc(obj.category)}</b> in <b>${esc(getL1(obj.process))} › ${esc(obj.process)}</b>` : 'this object';
+    const total = dependents.size + dependencies.size;
+    let html = `<div class="answer">`
+      + `<p>You're planning to change <b>${esc(name)}</b> — ${where}. `
+      + (total
+        ? `I traced <b>${total}</b> connected object${total !== 1 ? 's' : ''} ${liveOn ? 'from the local map <b>and</b> the live SAP MS1 system' : 'from the local dependency map'}.`
+        : (liveOn ? `I found no connected objects in the local map or live SAP — it looks self-contained, but still smoke-test it.`
+                  : `I found no links in the local map. Turn on <b>🌐 Search SAP MS1 live</b> for a code-level check.`))
+      + `</p>`;
+    if (dependents.size)
+      html += `<p><b>⚠️ Impacted — these use / depend on ${esc(name)}, so a change here can break them:</b></p>`
+        + `<div class="impsec">${block(D)}</div>`;
+    if (dependencies.size)
+      html += `<p><b>🔗 ${esc(name)} depends on these — confirm they still provide what it expects:</b></p>`
+        + `<div class="impsec">${block(U)}</div>`;
+    html += `<div class="impcheck"><div class="livehdr">✅ What to check</div><ul>`
+      + checks.map(c => `<li>${c}</li>`).join('') + `</ul></div></div>`;
+
+    bubble.innerHTML = html;
+    bubble.querySelectorAll('.open2').forEach(a => a.addEventListener('click', () => openObject(a.dataset.name)));
   }
 
   function doSearch(displayQ, searchQ) {
@@ -2361,6 +2504,7 @@ function initAssistant() {
       addBot(`Hi! Ask me for any custom ABAP or BW object — e.g. “planning function to copy FF revenue”. Say “help” for more.`);
       return;
     }
+    if (local.action === 'impact') { impactAnalysis(q); return; }
 
     // 2) if an LLM is wired, let it interpret generic phrasing
     if (State.assistant && State.assistant.llm) {
