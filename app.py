@@ -56,9 +56,67 @@ def load_or_build():
     with open(path, "r", encoding="utf-8") as fh:
         data = json.load(fh)
     data = _apply_edits(_merge_manual(data))
+    data = _merge_planfunc_class(data)
     pkgs = _load_pkgs()
     if pkgs:
         data["packages"] = pkgs
+    return data
+
+
+PLANFUNC_CLASS_FILE = os.environ.get("PSPE_PLANFUNC_CLASS_FILE") \
+    or os.path.join(HERE, "planfunc_class.json")
+
+
+def _merge_planfunc_class(data):
+    """Overlay Planning Function -> custom ABAP exit class links, sourced once
+    from SAP MS1 tables RSPLF_SRV x RSPLF_SRVTYPE (SRVNM -> SRVTYPENM -> CLASSNM,
+    OBJVERS='A', CLASSNM LIKE 'Z%'). Read-only; stored locally so the dashboard
+    needs no live SAP call (and never the freestyle Data Preview that dumped).
+
+    For every mapped planning function that exists in the repository, ensures the
+    class exists as an ABAP/Class object and adds an edge PlanningFunction->Class.
+    """
+    try:
+        with open(PLANFUNC_CLASS_FILE, "r", encoding="utf-8") as fh:
+            mp = (json.load(fh) or {}).get("map", {})
+    except Exception:
+        return data
+    if not mp:
+        return data
+
+    objs = data.setdefault("objects", [])
+    edges = data.setdefault("edges", [])
+    by_upper = {str(o.get("name", "")).upper(): o for o in objs}
+    edge_seen = {(str(e.get("source", "")).upper(), str(e.get("target", "")).upper())
+                 for e in edges}
+
+    for func, cls in mp.items():
+        if not func or not cls:
+            continue
+        fo = by_upper.get(func.upper())
+        if not fo:                                   # only link functions we know
+            continue
+        co = by_upper.get(cls.upper())
+        if not co:                                   # add the exit class as an object
+            co = {
+                "name": cls,
+                "domain": "ABAP",
+                "category": "Class",
+                "custom": True,
+                "process": fo.get("process") or "Unassigned",
+                "package": "",
+                "author": "",
+                "created": "",
+                "description": "BW-IP planning exit class (RSPLF_SRVTYPE.CLASSNM)",
+                "source": "SAP:RSPLF_SRVTYPE",
+            }
+            objs.append(co)
+            by_upper[cls.upper()] = co
+        key = (func.upper(), cls.upper())
+        if key not in edge_seen:
+            edge_seen.add(key)
+            edges.append({"source": fo.get("name", func), "target": co.get("name", cls),
+                          "kind": "planfunc-class"})
     return data
 
 
