@@ -2439,7 +2439,43 @@ function initAssistant() {
       const cover = matched / kw.length;
       if (matched >= 1 && (cover >= 0.5 || matched >= 2)) out.push({ t, cover, matched });
     });
-    return out.sort((a, b) => b.cover - a.cover || b.matched - a.matched).map(x => x.t);
+    const ranked = out.sort((a, b) => b.cover - a.cover || b.matched - a.matched).map(x => x.t);
+    return filterTaughtByIntent(query, ranked);
+  }
+
+  /* keep only the taught objects whose TYPE/DOMAIN matches the question's
+     intent (e.g. an "odata service / class" question -> ABAP only, not BW) */
+  function filterTaughtByIntent(query, taught) {
+    if (taught.length <= 1) return taught;
+    const qLower = ' ' + query.toLowerCase() + ' ';
+    const tokens = [...new Set(tokenize(query))];
+    const intentCats = detectIntentCats(qLower, tokens);
+    const abapHit = /\b(abap|odata|o[- ]?data|service|services|class|classes|method|methods|interface|fm|function\s*module|module|program|report|badi|enhancement|ddic|structure)\b/.test(qLower);
+    const bwHit = /\b(bw|bw[- ]?ip|bex|query|queries|planning|plan\s*seq|planseq|sequence|planning\s*function|filter|infoprovider|infoobject|aggregation|cube|dso|keyfigure|key\s*figure)\b/.test(qLower);
+    let domain = null;
+    if (abapHit && !bwHit) domain = 'ABAP';
+    else if (bwHit && !abapHit) domain = 'BW';
+
+    const byName = Object.fromEntries((State.objects || []).map(o => [o.name.toUpperCase(), o]));
+    const catOf = t => { const o = byName[(t.object || '').toUpperCase()]; return (o && o.category) || t.type || ''; };
+    const domOf = t => {
+      const o = byName[(t.object || '').toUpperCase()];
+      if (o && o.domain) return o.domain;
+      const c = (catOf(t) || '').toLowerCase();
+      return /query|planning|filter|infoprovider|infoobject|aggregation|infocube|dso/.test(c) ? 'BW' : 'ABAP';
+    };
+
+    // 1) precise category intent (e.g. "planning sequence") wins if any match
+    if (intentCats.size) {
+      const catMatched = taught.filter(t => intentCats.has(catOf(t)));
+      if (catMatched.length) return catMatched;
+    }
+    // 2) domain intent (ABAP vs BW) filters the rest
+    if (domain) {
+      const domMatched = taught.filter(t => domOf(t) === domain);
+      if (domMatched.length) return domMatched;
+    }
+    return taught;
   }
 
   function renderTaught(taught) {
