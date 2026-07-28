@@ -2655,6 +2655,20 @@ function initAssistant() {
             push(e.source, e.target);
         });
       });
+      // keep ONLY what is actually connected to the class root, so the map is
+      // unambiguously about this class (drops any stray/disconnected cluster)
+      const adj = new Map();
+      const link = (a, b) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push(b); };
+      edges.forEach(e => { link(e.source, e.target); link(e.target, e.source); });
+      const reach = new Set([name]);
+      const stack = [name];
+      while (stack.length) {
+        const cur = stack.pop();
+        (adj.get(cur) || []).forEach(t => { if (!reach.has(t)) { reach.add(t); stack.push(t); } });
+      }
+      const keptEdges = edges.filter(e => reach.has(e.source) && reach.has(e.target));
+      edges.length = 0; keptEdges.forEach(e => edges.push(e));
+      nodes.clear(); reach.forEach(n => nodes.add(n));
     } else if (liveOn && !isPlanning) {
       // Live enrichment for other ABAP objects (FM etc.)
       try {

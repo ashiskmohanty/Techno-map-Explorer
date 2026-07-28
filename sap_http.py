@@ -277,15 +277,23 @@ def read_source(name: str, cfg: Optional[Dict[str, Any]] = None) -> str:
     base = (name or "").split("=>")[0].strip()
     if not is_configured(cfg) or not base:
         return ""
-    hit = next((h for h in adt_search(base, cfg, max_results=8)
+    hit = next((h for h in adt_search(base, cfg, max_results=12)
                 if h["name"].upper() == base.upper() and h.get("uri")), None)
     if not hit:
-        return ""
+        # one retry — ADT quickSearch is occasionally flaky / rate-limited
+        hit = next((h for h in adt_search(base, cfg, max_results=20)
+                    if h["name"].upper() == base.upper() and h.get("uri")), None)
+        if not hit:
+            return ""
     src_path = hit["uri"].rstrip("/") + "/source/main"
-    try:
-        return (_get(cfg, src_path, accept="text/plain").get("raw", "") or "")
-    except Exception:
-        return ""
+    for _ in range(2):
+        try:
+            raw = (_get(cfg, src_path, accept="text/plain").get("raw", "") or "")
+            if raw:
+                return raw
+        except Exception:
+            pass
+    return ""
 
 
 # --------------------------------------------------------------------------- #
