@@ -447,19 +447,48 @@ def api_sap_explain():
 
 @app.route("/api/sap/planlinks", methods=["POST"])
 def api_sap_planlinks():
-    """Live BW-IP planning links from table RSPLS_SEQUENCE_S: a Planning Sequence
-    to its functions/filters/aggregation levels/queries, or a function/filter to
-    the sequences that use it. Used to enrich the dependency / impact map."""
+    """BW-IP planning links (Planning Sequence <-> Planning Functions / Filters /
+    Aggregation Levels) for the dependency / impact map.
+
+    Read-only and computed entirely from the LOCAL pre-built snapshot
+    (data.json) — it makes NO call to SAP. The live ADT Data Preview freestyle
+    service was intentionally removed because reading RSPLS_SEQUENCE_S through it
+    triggered SAPSQL_DATA_LOSS short dumps in SAP (a bug in that standard read
+    service with long BW key values) and required an HTTP POST. This endpoint
+    therefore never touches SAP and cannot raise a dump.
+    """
     p = request.get_json(silent=True) or {}
     name = (p.get("name") or "").strip()
     if not name:
         return jsonify({"edges": [], "source": "none"})
-    if not sap_http.is_configured():
-        return jsonify({"edges": [], "source": "offline"})
     try:
-        edges = sap_http.plan_seq_links(name)
+        data = load_or_build()
+        up = name.upper()
+        cat = {}
+        for o in data.get("objects", []):
+            cat[str(o.get("name", "")).upper()] = o.get("category") or "Object"
+        edges, seen = [], set()
+
+        def add(s, t, kind):
+            if not s or not t or s.upper() == t.upper():
+                return
+            k = (s.upper(), t.upper(), kind)
+            if k in seen:
+                return
+            seen.add(k)
+            ttype = cat.get(t.upper()) or cat.get(s.upper()) or "Object"
+            edges.append({"source": s, "target": t, "kind": kind, "type": ttype})
+
+        for e in data.get("edges", []):
+            s, t = e.get("source"), e.get("target")
+            if not s or not t:
+                continue
+            if s.upper() == up:            # name -> child (function/filter/aggr it uses)
+                add(s, t, "seq-child")
+            elif t.upper() == up:          # parent -> name (a sequence that uses name)
+                add(t, s, "used-by-seq")
         _track("planlinks", n=len(edges))
-        return jsonify({"edges": edges, "source": "live" if edges else "empty"})
+        return jsonify({"edges": edges, "source": "local" if edges else "empty"})
     except Exception as e:
         app.logger.warning("planlinks failed: %s", e)
         return jsonify({"edges": [], "source": "error", "error": str(e)})

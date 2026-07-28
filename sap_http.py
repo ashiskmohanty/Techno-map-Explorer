@@ -388,9 +388,21 @@ DATA_PREVIEW = "/sap/bc/adt/datapreview/freestyle"
 
 def read_table(sql: str, cfg: Optional[Dict[str, Any]] = None,
                max_rows: int = 500) -> List[Dict[str, str]]:
-    """Run a free-style Open-SQL SELECT against SAP MS1 via the ADT Data Preview
-    service and return the rows as dicts. Read-only; best effort (empty on any
-    problem). Used to read BW planning tables such as RSPLS_SEQUENCE."""
+    """DISABLED — always returns [] and makes NO call to SAP.
+
+    This used to run a free-style Open-SQL SELECT through the ADT Data Preview
+    service (`/sap/bc/adt/datapreview/freestyle`). That standard SAP read
+    service short-dumped with SAPSQL_DATA_LOSS in CL_ADT_DP_OPEN_SQL_HANDLER
+    when reading long-key BW tables such as RSPLS_SEQUENCE_S, and it required an
+    HTTP POST. To guarantee the agent never triggers a dump and never issues a
+    POST/update against SAP, this reader is disabled. Planning dependencies are
+    now served from the local snapshot (see app.py /api/sap/planlinks)."""
+    return []
+
+
+def _read_table_freestyle_DISABLED(sql: str, cfg: Optional[Dict[str, Any]] = None,
+                                    max_rows: int = 500) -> List[Dict[str, str]]:
+    """Retained for reference only — NOT called. See read_table docstring."""
     cfg = _cfg(cfg)
     if not is_configured(cfg) or not (sql or "").strip():
         return []
@@ -436,13 +448,14 @@ def read_table(sql: str, cfg: Optional[Dict[str, Any]] = None,
 
 
 def plan_seq_links(name: str, cfg: Optional[Dict[str, Any]] = None) -> List[Dict[str, str]]:
-    """Live BW-IP planning dependencies from table RSPLS_SEQUENCE_S (no SDK).
+    """DISABLED live reader — returns []. Planning links are now computed from the
+    local snapshot in app.py (/api/sap/planlinks) to avoid the SAPSQL_DATA_LOSS
+    dumps and POST calls caused by the ADT Data Preview freestyle service."""
+    return []
 
-    - If `name` is a Planning Sequence -> edges to its Planning Functions
-      (SRVNM), Filters (SELOBJ), Aggregation Levels (AGGRLEVEL) and Queries.
-    - If `name` is a Planning Function / Filter / Aggregation Level -> edges to
-      the Planning Sequences that use it (reverse lookup).
-    """
+
+def _plan_seq_links_live_DISABLED(name: str, cfg: Optional[Dict[str, Any]] = None) -> List[Dict[str, str]]:
+    """Retained for reference only — NOT called (would read RSPLS_SEQUENCE_S)."""
     cfg = _cfg(cfg)
     nm = (name or "").strip()
     if not is_configured(cfg) or not nm:
