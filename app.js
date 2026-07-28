@@ -2260,6 +2260,10 @@ function initAssistant() {
         || /^(clear|reset|clean|wipe|start over|new chat|clear all)\.?$/.test(s)
         || /\bclear (the )?(chat|response|screen|conversation)\b/.test(s)) return { action: 'clear' };
     if (/^(help|examples?|what can you|how (do|does|to)|guide|usage)\b/.test(s) || s === '?') return { action: 'help' };
+    // FOX formula display
+    if (/\bfox\b/.test(s)
+        || (/\b(show|display|view|see|get|open|reveal)\b[^?]*\bformula\b/.test(s)))
+      return { action: 'fox' };
     // dependency map / diagram request
     if (/\b(dependenc\w*|flow)\s*(map|diagram|graph|chart|tree|view)\b/.test(s)
         || /\b(show|display|draw|render|visuali[sz]e|generate|build|give|create|plot)\b[^?]*\b(map|diagram|graph|flow|mermaid|dependenc\w*)\b/.test(s)
@@ -2545,6 +2549,46 @@ function initAssistant() {
     }
   }
 
+  /* ---- FOX formula viewer: show the FOX source of a formula planning function ---- */
+  async function foxFormulaAnswer(displayQ) {
+    const name = resolveTargetObject(displayQ);
+    if (!name) {
+      addBot(`Which planning function's FOX formula? e.g. <i>“show the FOX formula for ZPLAN_DISTRIBUTION”</i>.`);
+      return;
+    }
+    const obj = State.objects.find(o => o.name.toUpperCase() === name.toUpperCase());
+    if (obj && obj.category && obj.category !== 'Planning Function') {
+      addBot(`<b>${esc(name)}</b> is a ${esc(obj.category)}, not a planning function — FOX formulas only exist on planning functions.`);
+      return;
+    }
+    const bubble = addBot(`<span class="acheck"><span class="spin"></span> Fetching the FOX formula for <b>${esc(name)}</b>…</span>`);
+    try {
+      const r = await fetch('/api/planfunc/fox', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const res = await r.json();
+      if (!res.ok || !res.isFormula || !res.fox) {
+        bubble.innerHTML = `<div class="answer"><b>${esc(name)}</b> is not a FOX-formula planning function `
+          + `(it uses a standard or custom-class function type), so there is no FOX code to show.</div>`;
+        return;
+      }
+      const lines = res.fox.split('\n').length;
+      bubble.innerHTML = `<div class="answer">`
+        + `<p>🧮 FOX formula for <b>${esc(name)}</b> — <b>${lines}</b> lines.</p>`
+        + `<div class="botmap-tools"><a class="fox-copy">⧉ Copy</a></div>`
+        + `<pre class="foxcode">${esc(res.fox)}</pre></div>`;
+      const btn = bubble.querySelector('.fox-copy');
+      if (btn) btn.addEventListener('click', () => {
+        navigator.clipboard && navigator.clipboard.writeText(res.fox);
+        btn.textContent = '✓ Copied';
+        setTimeout(() => { btn.textContent = '⧉ Copy'; }, 1500);
+      });
+    } catch (e) {
+      bubble.innerHTML = `<div class="answer">Couldn't load the FOX formula for <b>${esc(name)}</b>.</div>`;
+    }
+  }
+
   /* ---- DEPENDENCY MAP in chat: render a Mermaid map (local + live MS1) + PDF ---- */
   async function dependencyMapAnswer(displayQ) {
     const name = resolveTargetObject(displayQ);
@@ -2772,6 +2816,7 @@ function initAssistant() {
     }
     if (local.action === 'impact') { impactAnalysis(q); return; }
     if (local.action === 'depmap') { dependencyMapAnswer(q); return; }
+    if (local.action === 'fox') { foxFormulaAnswer(q); return; }
 
     // 2) if an LLM is wired, let it interpret generic phrasing
     if (State.assistant && State.assistant.llm) {

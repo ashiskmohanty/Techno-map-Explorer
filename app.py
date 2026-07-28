@@ -57,6 +57,7 @@ def load_or_build():
         data = json.load(fh)
     data = _apply_edits(_merge_manual(data))
     data = _merge_planfunc_class(data)
+    data = _flag_fox(data)
     pkgs = _load_pkgs()
     if pkgs:
         data["packages"] = pkgs
@@ -117,6 +118,37 @@ def _merge_planfunc_class(data):
             edge_seen.add(key)
             edges.append({"source": fo.get("name", func), "target": co.get("name", cls),
                           "kind": "planfunc-class"})
+    return data
+
+
+FOX_FILE = os.environ.get("PSPE_FOX_FILE") or os.path.join(HERE, "fox_formulas.json")
+_FOX_CACHE = None
+
+
+def _load_fox():
+    """Load & cache the Planning Function -> FOX formula source map (read once
+    from SAP RSPLF_SRV_P, stored locally). Returns {SRVNM_UPPER: code}."""
+    global _FOX_CACHE
+    if _FOX_CACHE is None:
+        try:
+            with open(FOX_FILE, "r", encoding="utf-8") as fh:
+                fox = (json.load(fh) or {}).get("fox", {})
+            _FOX_CACHE = {str(k).upper(): v for k, v in fox.items()}
+        except Exception:
+            _FOX_CACHE = {}
+    return _FOX_CACHE
+
+
+def _flag_fox(data):
+    """Mark planning-function objects that carry a FOX formula so the UI can
+    offer to display it. No SAP call — uses the local fox_formulas.json."""
+    fox = _load_fox()
+    if not fox:
+        return data
+    for o in data.get("objects", []):
+        if o.get("category") == "Planning Function" \
+                and str(o.get("name", "")).upper() in fox:
+            o["hasFox"] = True
     return data
 
 
@@ -550,6 +582,18 @@ def api_sap_planlinks():
     except Exception as e:
         app.logger.warning("planlinks failed: %s", e)
         return jsonify({"edges": [], "source": "error", "error": str(e)})
+
+
+@app.route("/api/planfunc/fox", methods=["POST"])
+def api_planfunc_fox():
+    """Return the FOX formula source for a planning function (local, read-only).
+    Sourced once from SAP table RSPLF_SRV_P (PARNM='FLINE'); no live SAP call."""
+    p = request.get_json(silent=True) or {}
+    name = (p.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "name required"}), 400
+    code = _load_fox().get(name.upper(), "")
+    return jsonify({"ok": True, "name": name, "fox": code, "isFormula": bool(code)})
 
 
 @app.route("/api/assistant/code", methods=["POST"])
