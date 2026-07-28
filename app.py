@@ -412,6 +412,39 @@ def api_sap_uses():
         return jsonify({"edges": [], "source": "error", "error": str(e)})
 
 
+@app.route("/api/sap/explain", methods=["POST"])
+def api_sap_explain():
+    """Read an object's ABAP source live and return a short, human summary
+    (signature + leading header comments) to explain what it does — used by the
+    bot's impact analysis. Best effort; BW planning objects have no ADT source."""
+    import re as _re
+    p = request.get_json(silent=True) or {}
+    name = (p.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "name required"}), 400
+    if not sap_http.is_configured():
+        return jsonify({"ok": False, "source": "offline"})
+    src = sap_http.read_source(name)
+    if not src:
+        return jsonify({"ok": True, "signature": "", "comments": []})
+    lines = src.splitlines()
+    sig = ""
+    for l in lines:
+        if _re.match(r"^\s*(FUNCTION|METHOD|FORM|CLASS|REPORT|INTERFACE|PROGRAM)\b", l, _re.I):
+            sig = l.strip()
+            break
+    comments = []
+    for l in lines[:160]:
+        s = l.strip()
+        if s.startswith("*") or s.startswith('"'):
+            c = s.lstrip('*"* ').strip()
+            if c and not _re.match(r"^[-=*_.]{3,}$", c):
+                comments.append(c)
+        if len(comments) >= 8:
+            break
+    return jsonify({"ok": True, "signature": sig, "comments": comments})
+
+
 @app.route("/api/assistant/code", methods=["POST"])
 def api_assistant_code():
     """Scan ABAP/FOX code comments in SAP MS1 for the question terms.

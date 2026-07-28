@@ -2171,11 +2171,12 @@ function initAssistant() {
         || /\bclear (the )?(chat|response|screen|conversation)\b/.test(s)) return { action: 'clear' };
     if (/^(help|examples?|what can you|how (do|does|to)|guide|usage)\b/.test(s) || s === '?') return { action: 'help' };
     // impact / where-used analysis
-    if ((/\b(impact|affect|affected|impacted|break|breaks|broken|blast radius|dependenc\w*|dependent)\b/.test(s)
-          && /\b(change|changing|changed|modif\w+|update|updating|updated|delete|deleting|adjust\w*|touch|if i|when i|used|uses|call\w*|of)\b/.test(s))
+    if ((/\b(impact\w*|affect\w*|break\w*|broken|blast\s*radius|dependenc\w*|dependent|regress\w*)\b/.test(s)
+          && /\b(change|changing|changed|modif\w+|update\w*|delete\w*|adjust\w*|touch|remove\w*|if i|when i|used|uses|call\w*|of|to)\b/.test(s))
         || /^impact\b/.test(s) || /\bimpact analysis\b/.test(s)
         || /\bwhere[- ]?used\b/.test(s)
-        || /\bwhat (happens|breaks|is impacted|will be impacted|would break)\b/.test(s))
+        || /\bwhat (are|is|s)\b[^?]*\bimpact/.test(s)
+        || /\bwhat (happens|breaks|would break|will break|is impacted|will be impacted)\b/.test(s))
       return { action: 'impact' };
     if ((/^(add|create|register|insert)\b/.test(s) &&
          /\b(object|abap|bw|fm|function|module|class|query|planning|sequence|filter|infoprovider|repository|tile|local)\b/.test(s))
@@ -2285,40 +2286,68 @@ function initAssistant() {
       add(downAdj, e.source.toUpperCase(), e.target);   // source uses target
       add(upAdj, e.target.toUpperCase(), e.source);     // target is used by source
     });
-    const bfs = (adj, out) => {
-      const q = [[key, 0]]; const seen = new Set([key]);
-      while (q.length) {
-        const [n, d] = q.shift();
-        if (d >= 2) continue;
-        (adj.get(n) || []).forEach(m => {
-          const mk = m.toUpperCase();
-          if (mk !== key && !seen.has(mk)) { seen.add(mk); out.add(m); q.push([mk, d + 1]); }
-        });
-      }
+    const uniq = arr => {
+      const seen = new Set(), out = [];
+      (arr || []).forEach(n => { const u = (n || '').toUpperCase(); if (u && u !== key && !seen.has(u)) { seen.add(u); out.push(n); } });
+      return out;
     };
-    const dependents = new Set(), dependencies = new Set();
-    bfs(upAdj, dependents);       // who depends on `name` (impacted)
-    bfs(downAdj, dependencies);   // what `name` depends on
-    return { dependents, dependencies };
+    const depDirect = uniq(upAdj.get(key));     // directly USE name (primary impact)
+    const depsDirect = uniq(downAdj.get(key));  // name directly USES these
+    const directU = new Set([...depDirect, ...depsDirect].map(n => n.toUpperCase()));
+    const hop2 = (adj, first) => {
+      const acc = [];
+      first.forEach(n => (adj.get(n.toUpperCase()) || []).forEach(x => acc.push(x)));
+      return uniq(acc).filter(n => !directU.has(n.toUpperCase()));
+    };
+    return {
+      depDirect, depsDirect,
+      depIndirect: hop2(upAdj, depDirect),
+      depsIndirect: hop2(downAdj, depsDirect),
+    };
+  }
+
+  /* tailored “what to test” guidance from the object type + connected categories */
+  function buildImpactChecks(obj, cats, liveOn) {
+    const c = new Set([...cats, obj && obj.category].filter(Boolean));
+    const has = re => [...c].some(x => re.test(x));
+    const checks = [];
+    if (obj && /Planning Sequence/.test(obj.category))
+      checks.push(`Execute <b>${esc(obj.name)}</b> in a test version/cube and reconcile the resulting plan data (key figures & record counts) against a baseline run.`);
+    if (has(/Planning Function/))
+      checks.push('Re-run the linked <b>planning functions</b> (FOX) and confirm copy / valuation / derivation results are unchanged.');
+    if (has(/Planning Sequence/))
+      checks.push('Re-run the dependent <b>planning sequences</b> end-to-end and compare before/after plan figures.');
+    if (has(/Filter/))
+      checks.push('Verify the <b>filters</b> still select the intended records (period, version, account, org unit).');
+    if (has(/Aggregation|InfoProvider|InfoObject/))
+      checks.push('Confirm the <b>aggregation levels / info providers</b> (characteristics & key figures) remain compatible with the change.');
+    if (has(/BEx Query/))
+      checks.push('Validate the connected <b>BEx queries</b> — values, variables, restricted/calculated key figures and authorizations.');
+    if (has(/Function Module|Class|Interface|Program|Method|Table/))
+      checks.push('Unit-test the <b>ABAP callers</b>, re-run <b>where-used (SE80 / ADT)</b>, and transport all impacted objects together.');
+    checks.push('Notify the owners of the impacted <b>process tiles</b> and add these objects to the regression / cut-over scope.');
+    if (!liveOn) checks.push('Turn on <b>🌐 Search SAP MS1 live</b> for a complete code-level where-used and a code-insight summary.');
+    return checks;
   }
 
   async function impactAnalysis(displayQ) {
     const name = resolveTargetObject(displayQ);
     if (!name) {
-      addBot(`Tell me which object to assess — e.g. <i>“impact if I change ZPS_CPM_VALUATION”</i> or a planning-sequence name.`);
+      addBot(`Tell me which object to assess — e.g. <i>“impact if I modify ZCPD_DPS_PLAN_VAL_SE”</i>.`);
       return;
     }
-    const byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
-    const obj = byName[name];
+    const byName = Object.fromEntries(State.objects.map(o => [o.name.toUpperCase(), o]));
+    const obj = byName[name.toUpperCase()];
     const liveOn = !!(State.assistant && State.assistant.searchMs1) && isLive();
     track('query', { q: displayQ, matched: true, topAcc: 100, live: liveOn });
 
-    const bubble = addBot(`<span class="acheck"><span class="spin"></span> Analysing the impact of changing `
-      + `<b>${esc(name)}</b>${liveOn ? ' (local map + live SAP MS1)' : ' (local map)'}…</span>`);
+    const bubble = addBot(`<span class="acheck"><span class="spin"></span> Tracing what’s connected to `
+      + `<b>${esc(name)}</b>${liveOn ? ' — local map + live SAP MS1' : ' — local map'}…</span>`);
 
     const li = localImpact(name);
-    const dependents = new Set([...li.dependents]);
-    let dependencies = new Set([...li.dependencies]);
+    const directDep = new Set(li.depDirect);      // impacted (directly use name)
+    const directDeps = new Set(li.depsDirect);    // name directly uses
+    const indirect = new Set([...li.depIndirect, ...li.depsIndirect]);
 
     if (liveOn) {
       try {
@@ -2333,70 +2362,83 @@ function initAssistant() {
           }).then(r => r.json()).catch(() => ({ edges: [] })));
         }
         const [wu, us] = await Promise.all(reqs);
-        (wu.edges || []).forEach(e => {
-          const other = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source;
-          if (other && other.toUpperCase() !== name.toUpperCase()) dependents.add(other);
-        });
-        if (us) (us.edges || []).forEach(e => {
-          const other = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source;
-          if (other && other.toUpperCase() !== name.toUpperCase()) dependencies.add(other);
-        });
-      } catch (e) { /* ignore, keep local */ }
+        (wu.edges || []).forEach(e => { const o = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source; if (o && o.toUpperCase() !== name.toUpperCase()) directDep.add(o); });
+        if (us) (us.edges || []).forEach(e => { const o = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source; if (o && o.toUpperCase() !== name.toUpperCase()) directDeps.add(o); });
+      } catch (e) { /* keep local */ }
     }
-    dependents.delete(name);
-    dependencies = new Set([...dependencies].filter(n => !dependents.has(n) && n !== name));
+    directDep.delete(name); directDeps.delete(name);
+    const directUpper = new Set([...directDep, ...directDeps].map(n => n.toUpperCase()));
+    const indirectArr = [...indirect].filter(n => !directUpper.has(n.toUpperCase()) && n.toUpperCase() !== name.toUpperCase());
 
-    const grpOf = set => {
-      const items = [...set].map(n => byName[n] || { name: n, domain: /^(?:\/[A-Z0-9]+\/)?[ZY]/i.test(n) ? 'ABAP' : '?', category: 'Object' });
-      return {
-        items,
-        abap: items.filter(o => o.domain === 'ABAP'),
-        bw: items.filter(o => o.domain === 'BW'),
-        other: items.filter(o => o.domain !== 'ABAP' && o.domain !== 'BW'),
-      };
-    };
-    const D = grpOf(dependents), U = grpOf(dependencies);
-
+    const info2 = n => byName[n.toUpperCase()] || { name: n, domain: /^(?:\/[A-Z0-9]+\/)?[ZY]/i.test(n) ? 'ABAP' : '?', category: 'Object' };
     const objLink = o => `<a class="rn open2" data-name="${esc(o.name)}">`
       + `<i class="dotd" style="background:${nodeColor(o.category)}"></i>${esc(o.name)}</a>`
       + (o.category && o.category !== 'Object' ? `<span class="rc">${esc(o.category)}</span>` : '');
-    const block = grp => {
-      const g = (label, arr) => arr.length
-        ? `<div class="impgrp"><span class="impgl">${label} · ${arr.length}</span>${arr.slice(0, 40).map(objLink).join('')}</div>` : '';
-      return g('ABAP', grp.abap) + g('BW-IP', grp.bw) + g('Other', grp.other);
+    const groupBlock = names => {
+      const items = names.map(info2);
+      const abap = items.filter(o => o.domain === 'ABAP'), bw = items.filter(o => o.domain === 'BW'),
+        other = items.filter(o => o.domain !== 'ABAP' && o.domain !== 'BW');
+      const g = (lbl, arr) => arr.length ? `<div class="impgrp"><span class="impgl">${lbl} · ${arr.length}</span>${arr.slice(0, 40).map(objLink).join('')}</div>` : '';
+      return g('ABAP', abap) + g('BW-IP', bw) + g('Other', other);
     };
 
-    const cats = new Set([...D.items, ...U.items].map(o => o.category));
-    const checks = [];
-    if ([...cats].some(c => /Planning Sequence|Planning Function|Filter|Aggregation/.test(c)))
-      checks.push('Re-run the affected <b>planning sequences / functions</b> and reconcile the plan figures before vs. after the change.');
-    if ([...cats].some(c => /BEx Query|InfoProvider|InfoObject/.test(c)))
-      checks.push('Validate the linked <b>BEx queries</b> (key figures, variables, restricted/calculated columns, authorizations) still return correct numbers.');
-    if ([...cats].some(c => /Function Module|Class|Interface|Program|Method|Table/.test(c)))
-      checks.push('Unit-test the <b>ABAP callers</b>, re-run <b>where-used (SE80 / ADT)</b>, and transport all impacted objects together.');
-    checks.push('Inform the owners of the impacted <b>process tiles</b> and add these objects to the regression / cut-over scope.');
-    if (!liveOn) checks.push('Turn on <b>🌐 Search SAP MS1 live</b> below for a complete, code-level where-used from the live system.');
-
     const where = obj ? `a <b>${esc(obj.category)}</b> in <b>${esc(getL1(obj.process))} › ${esc(obj.process)}</b>` : 'this object';
-    const total = dependents.size + dependencies.size;
+    const totalDirect = directDep.size + directDeps.size;
     let html = `<div class="answer">`
-      + `<p>You're planning to change <b>${esc(name)}</b> — ${where}. `
-      + (total
-        ? `I traced <b>${total}</b> connected object${total !== 1 ? 's' : ''} ${liveOn ? 'from the local map <b>and</b> the live SAP MS1 system' : 'from the local dependency map'}.`
-        : (liveOn ? `I found no connected objects in the local map or live SAP — it looks self-contained, but still smoke-test it.`
-                  : `I found no links in the local map. Turn on <b>🌐 Search SAP MS1 live</b> for a code-level check.`))
-      + `</p>`;
-    if (dependents.size)
-      html += `<p><b>⚠️ Impacted — these use / depend on ${esc(name)}, so a change here can break them:</b></p>`
-        + `<div class="impsec">${block(D)}</div>`;
-    if (dependencies.size)
-      html += `<p><b>🔗 ${esc(name)} depends on these — confirm they still provide what it expects:</b></p>`
-        + `<div class="impsec">${block(U)}</div>`;
-    html += `<div class="impcheck"><div class="livehdr">✅ What to check</div><ul>`
+      + `<p>You’re modifying <b>${esc(name)}</b> — ${where}. Below is the <b>directly-connected footprint</b> `
+      + `${liveOn ? '(local map <b>+ live SAP MS1</b>)' : '(local map — enable 🌐 live for a code-level check)'}, which carries the primary impact.</p>`;
+    if (directDep.size)
+      html += `<p><b>⚠️ Directly impacted — these call / consume ${esc(name)}, so they break first:</b></p>`
+        + `<div class="impsec">${groupBlock([...directDep])}</div>`;
+    if (directDeps.size)
+      html += `<p><b>🔧 ${esc(name)} directly uses these — confirm they still return what it expects:</b></p>`
+        + `<div class="impsec">${groupBlock([...directDeps])}</div>`;
+    if (!totalDirect)
+      html += `<p>No directly-connected custom objects found ${liveOn ? 'in the local map or live SAP' : 'locally — enable 🌐 live SAP for a code-level where-used'}.</p>`;
+    if (indirectArr.length)
+      html += `<p class="muted" style="margin-top:6px">Also connected 2 steps away (secondary): `
+        + indirectArr.slice(0, 12).map(n => `<a class="rn open2" data-name="${esc(n)}">${esc(n)}</a>`).join(' ')
+        + (indirectArr.length > 12 ? ` +${indirectArr.length - 12} more` : '') + `</p>`;
+
+    html += `<div id="impCode"></div>`;
+    const cats = new Set([...directDep, ...directDeps].map(n => info2(n).category));
+    const checks = buildImpactChecks(obj, cats, liveOn);
+    html += `<div class="impcheck"><div class="livehdr">✅ What to test</div><ul>`
       + checks.map(c => `<li>${c}</li>`).join('') + `</ul></div></div>`;
 
     bubble.innerHTML = html;
     bubble.querySelectorAll('.open2').forEach(a => a.addEventListener('click', () => openObject(a.dataset.name)));
+
+    // ---- code explain (live): read the source of the target + direct ABAP neighbours ----
+    if (liveOn) {
+      const scan = [];
+      if (obj && obj.domain === 'ABAP') scan.push(obj);
+      [...directDep, ...directDeps].map(info2).filter(o => o.domain === 'ABAP').forEach(o => scan.push(o));
+      const seen = new Set();
+      const uniqScan = scan.filter(o => { const u = o.name.toUpperCase(); if (seen.has(u)) return false; seen.add(u); return true; }).slice(0, 4);
+      const rows = [];
+      for (const o of uniqScan) {
+        try {
+          const r = await fetch('/api/sap/explain', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: o.name }),
+          });
+          const j = await r.json();
+          if (j && j.ok && (j.signature || (j.comments && j.comments.length))) {
+            const cm = (j.comments || []).slice(0, 2).join(' · ');
+            rows.push(`<div class="arow"><a class="rn open2" data-name="${esc(o.name)}">${esc(o.name)}</a>`
+              + `<span class="rc">${esc(o.category)}</span></div>`
+              + (j.signature ? `<div class="cmtline mono">${esc(j.signature.slice(0, 160))}</div>` : '')
+              + (cm ? `<div class="cmtline">${esc(cm.slice(0, 240))}</div>` : ''));
+          }
+        } catch (e) { /* ignore */ }
+      }
+      const holder = bubble.querySelector('#impCode');
+      if (holder && rows.length) {
+        holder.innerHTML = `<div class="impsec"><div class="livehdr">🧠 Code insight (live MS1) — what the impacted logic does</div>${rows.join('')}</div>`;
+        holder.querySelectorAll('.open2').forEach(a => a.addEventListener('click', () => openObject(a.dataset.name)));
+      }
+    }
   }
 
   function doSearch(displayQ, searchQ) {
