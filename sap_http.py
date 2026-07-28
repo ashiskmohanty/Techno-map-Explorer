@@ -380,6 +380,112 @@ def where_used(name: str, cfg: Optional[Dict[str, Any]] = None,
     return edges
 
 
+# --------------------------------------------------------------------------- #
+# Generic table read via ADT Data Preview (no SDK) - e.g. RSPLS_SEQUENCE
+# --------------------------------------------------------------------------- #
+DATA_PREVIEW = "/sap/bc/adt/datapreview/freestyle"
+
+
+def read_table(sql: str, cfg: Optional[Dict[str, Any]] = None,
+               max_rows: int = 500) -> List[Dict[str, str]]:
+    """Run a free-style Open-SQL SELECT against SAP MS1 via the ADT Data Preview
+    service and return the rows as dicts. Read-only; best effort (empty on any
+    problem). Used to read BW planning tables such as RSPLS_SEQUENCE."""
+    cfg = _cfg(cfg)
+    if not is_configured(cfg) or not (sql or "").strip():
+        return []
+    import xml.etree.ElementTree as ET
+    try:
+        opener = _opener(cfg)
+        csrf = _fetch_csrf(cfg, opener)
+        url = (cfg["httpbase"].rstrip("/") + DATA_PREVIEW
+               + "?rowNumber=" + str(int(max_rows))
+               + "&sap-client=" + cfg.get("client", "122"))
+        h = _auth_header(cfg)
+        h.update({"X-CSRF-Token": csrf, "Content-Type": "text/plain",
+                  "Accept": "application/xml,application/vnd.sap.adt.datapreview.table.v1+xml"})
+        req = urllib.request.Request(url, data=(sql or "").encode("utf-8"),
+                                     headers=h, method="POST")
+        with opener.open(req, timeout=_TIMEOUT) as r:
+            xml = r.read().decode("utf-8", "replace")
+        root = ET.fromstring(xml)
+    except Exception:
+        return []
+
+    # each <...columns> holds one <metadata name=..> and a <dataSet> of <data>
+    names, data = [], []
+    for col in root.iter():
+        if not col.tag.endswith("columns"):
+            continue
+        nm, vals = None, []
+        for ch in col:
+            if ch.tag.endswith("metadata"):
+                nm = _attr(ch, "name")
+            elif ch.tag.endswith("dataSet"):
+                for d in ch:
+                    vals.append((d.text or "").strip())
+        if nm:
+            names.append(nm)
+            data.append(vals)
+    n = max((len(v) for v in data), default=0)
+    rows = []
+    for i in range(n):
+        rows.append({names[j]: (data[j][i] if i < len(data[j]) else "")
+                     for j in range(len(names))})
+    return rows
+
+
+def plan_seq_links(name: str, cfg: Optional[Dict[str, Any]] = None) -> List[Dict[str, str]]:
+    """Live BW-IP planning dependencies from table RSPLS_SEQUENCE_S (no SDK).
+
+    - If `name` is a Planning Sequence -> edges to its Planning Functions
+      (SRVNM), Filters (SELOBJ), Aggregation Levels (AGGRLEVEL) and Queries.
+    - If `name` is a Planning Function / Filter / Aggregation Level -> edges to
+      the Planning Sequences that use it (reverse lookup).
+    """
+    cfg = _cfg(cfg)
+    nm = (name or "").strip()
+    if not is_configured(cfg) or not nm:
+        return []
+    import re as _re
+    if not _re.match(r"^[A-Za-z0-9_/]+$", nm):   # object-name chars only
+        return []
+    q = nm.replace("'", "''")
+    edges, seen = [], set()
+
+    def add(s, t, kind, ttype):
+        if not s or not t or s.upper() == t.upper():
+            return
+        k = (s.upper(), t.upper(), kind)
+        if k in seen:
+            return
+        seen.add(k)
+        edges.append({"source": s, "target": t, "kind": kind, "type": ttype})
+
+    # Case 1: name is a Planning Sequence -> its steps (functions/filters/aggr/query)
+    steps = read_table(
+        "SELECT * FROM RSPLS_SEQUENCE_S WHERE SEQNM = '%s' AND OBJVERS = 'A'" % q, cfg)
+    for r in steps:
+        seq = r.get("SEQNM") or nm
+        if r.get("SRVNM"):
+            add(seq, r["SRVNM"], "seq-func", "Planning Function")
+        if r.get("SELOBJ"):
+            add(seq, r["SELOBJ"], "seq-filter", "Filter")
+        if r.get("AGGRLEVEL"):
+            add(seq, r["AGGRLEVEL"], "seq-aggr", "Aggregation Level")
+        if r.get("QUERYNM"):
+            add(seq, r["QUERYNM"], "seq-query", "BEx Query")
+
+    # Case 2: name is a Function / Filter / Aggr Level -> sequences that use it
+    for col in ("SRVNM", "SELOBJ", "AGGRLEVEL"):
+        rows = read_table(
+            "SELECT * FROM RSPLS_SEQUENCE_S WHERE %s = '%s' AND OBJVERS = 'A'" % (col, q), cfg)
+        for r in rows:
+            seq = r.get("SEQNM")
+            if seq:
+                add(nm, seq, "used-by-seq", "Planning Sequence")
+    return edges
+
 
 def live_search(query: str, names: Optional[List[str]] = None,
                 cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

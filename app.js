@@ -1069,15 +1069,17 @@ async function traceDependencies(procName, objs) {
   const info = document.getElementById('dgInfo');
   const btn = document.getElementById('dgWhereUsed');
   const abap = objs.filter(o => o.custom && o.domain === 'ABAP').map(o => o.name);
-  if (!abap.length) { if (info) info.textContent = 'No ABAP objects to trace in this process.'; return; }
+  const bwPlan = objs.filter(o => o.custom && (o.domain === 'BW'
+    || /Planning Sequence|Planning Function|Filter|Aggregation/.test(o.category || ''))).map(o => o.name);
+  if (!abap.length && !bwPlan.length) { if (info) info.textContent = 'No traceable objects in this process.'; return; }
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> tracing…'; }
   try {
     const candidates = State.objects.filter(o => o.custom).map(o => o.name);
-    const r = await fetch('/api/sap/uses', {
+    const r = abap.length ? await fetch('/api/sap/uses', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ names: abap, candidates }),
-    });
-    const res = await r.json();
+    }) : null;
+    const res = r ? await r.json() : { edges: [] };
     const calls = res.edges || [];
     const byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
 
@@ -1089,6 +1091,11 @@ async function traceDependencies(procName, objs) {
       nodes.add(s); nodes.add(t); edges.push({ source: s, target: t });
     };
     calls.forEach(e => push(e.source, e.target));
+
+    // BW planning links from RSPLS_SEQUENCE_S for planning objects in this process
+    for (const bn of bwPlan.slice(0, 40)) {
+      (await fetchPlanLinks(bn)).forEach(e => push(e.source, e.target));
+    }
 
     // expand BW call targets through the local BW dependency chain (data flow)
     const undirected = depAdjacency();
@@ -1300,7 +1307,9 @@ function setDepZoom(z) {
    nothing came back so the caller can fall back to the local map. */
 async function fetchLiveGraph(root) {
   State._byName = Object.fromEntries(State.objects.map(o => [o.name, o]));
-  const isAbap = (State._byName[root] || {}).domain === 'ABAP';
+  const obj = State._byName[root] || {};
+  const isAbap = obj.domain === 'ABAP';
+  const isBwPlan = obj.domain === 'BW' || /Planning Sequence|Planning Function|Filter|Aggregation/.test(obj.category || '');
   const nodes = new Set([root]);
   const edges = []; const seen = new Set();
   const push = (s, t) => {
@@ -1320,6 +1329,10 @@ async function fetchLiveGraph(root) {
       (res.edges || []).forEach(e => push(e.source, e.target));
     } catch (e) { /* ignore */ }
   }
+  // BW planning structure from RSPLS_SEQUENCE_S (seq <-> function/filter/aggr/query)
+  if (isBwPlan || !obj.domain) {
+    (await fetchPlanLinks(root)).forEach(e => push(e.source, e.target));
+  }
   // incoming where-used (who references the root)
   try {
     const r = await fetch('/api/sap/whereused', {
@@ -1330,6 +1343,18 @@ async function fetchLiveGraph(root) {
     (res.edges || []).forEach(e => push(e.source, e.target));
   } catch (e) { /* ignore */ }
   return edges.length ? { nodes: [...nodes], edges, src: 'live MS1' } : null;
+}
+
+/* live BW-IP planning links from RSPLS_SEQUENCE_S */
+async function fetchPlanLinks(name) {
+  try {
+    const r = await fetch('/api/sap/planlinks', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const res = await r.json();
+    return res.edges || [];
+  } catch (e) { return []; }
 }
 
 async function drawDepMermaid(live = false) {
@@ -2369,6 +2394,15 @@ function initAssistant() {
         const [wu, us] = await Promise.all(reqs);
         (wu.edges || []).forEach(e => { const o = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source; if (o && o.toUpperCase() !== name.toUpperCase()) directDep.add(o); });
         if (us) (us.edges || []).forEach(e => { const o = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source; if (o && o.toUpperCase() !== name.toUpperCase()) directDeps.add(o); });
+        // BW planning links (RSPLS_SEQUENCE_S): seq->func/filter = dependency; func->seq = impacted
+        const isBwPlan = obj && (obj.domain === 'BW' || /Planning Sequence|Planning Function|Filter|Aggregation/.test(obj.category || ''));
+        if (isBwPlan || !obj) {
+          (await fetchPlanLinks(name)).forEach(e => {
+            const o = e.source.toUpperCase() === name.toUpperCase() ? e.target : e.source;
+            if (!o || o.toUpperCase() === name.toUpperCase()) return;
+            if (e.kind === 'used-by-seq') directDep.add(o); else directDeps.add(o);
+          });
+        }
       } catch (e) { /* keep local */ }
     }
     directDep.delete(name); directDeps.delete(name);

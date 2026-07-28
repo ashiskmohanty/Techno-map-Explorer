@@ -445,6 +445,26 @@ def api_sap_explain():
     return jsonify({"ok": True, "signature": sig, "comments": comments})
 
 
+@app.route("/api/sap/planlinks", methods=["POST"])
+def api_sap_planlinks():
+    """Live BW-IP planning links from table RSPLS_SEQUENCE_S: a Planning Sequence
+    to its functions/filters/aggregation levels/queries, or a function/filter to
+    the sequences that use it. Used to enrich the dependency / impact map."""
+    p = request.get_json(silent=True) or {}
+    name = (p.get("name") or "").strip()
+    if not name:
+        return jsonify({"edges": [], "source": "none"})
+    if not sap_http.is_configured():
+        return jsonify({"edges": [], "source": "offline"})
+    try:
+        edges = sap_http.plan_seq_links(name)
+        _track("planlinks", n=len(edges))
+        return jsonify({"edges": edges, "source": "live" if edges else "empty"})
+    except Exception as e:
+        app.logger.warning("planlinks failed: %s", e)
+        return jsonify({"edges": [], "source": "error", "error": str(e)})
+
+
 @app.route("/api/assistant/code", methods=["POST"])
 def api_assistant_code():
     """Scan ABAP/FOX code comments in SAP MS1 for the question terms.
