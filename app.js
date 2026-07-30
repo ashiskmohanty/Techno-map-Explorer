@@ -323,6 +323,7 @@ async function initRebuild() {
       </div>
       <span class="rb-chosen" data-chosen></span>
       <label class="rb-pick">Choose file<input type="file" accept=".xlsx,.xls"/></label>
+      <button type="button" class="rb-pick rb-template" data-template="${slot}" title="Download a blank ${esc(f.label || slot)} workbook">Template</button>
     </div>`;
   }).join('');
   if (status && status.packages) document.getElementById('rbPackages').placeholder = status.packages.join(', ');
@@ -336,10 +337,41 @@ async function initRebuild() {
       row.querySelector('[data-chosen]').textContent = f ? '✓ ' + f.name : '';
     });
   });
+  wrap.querySelectorAll('[data-template]').forEach(button => {
+    button.onclick = () => downloadRebuildTemplate(button.dataset.template, button);
+  });
   document.getElementById('rbReset').onclick = () => { setRbStatus('', ''); initRebuild(); };
   document.getElementById('rbRun').onclick = runRebuild;
   const gen = document.getElementById('rbGen');
   if (gen && State.data) gen.textContent = 'current data generated: ' + (State.data.generated || '—');
+}
+
+async function downloadRebuildTemplate(slot, button) {
+  const original = button.textContent;
+  button.disabled = true; button.textContent = 'Preparing…';
+  try {
+    const r = await fetch('/api/rebuild/template/' + encodeURIComponent(slot) + '?key=' + encodeURIComponent(State.adminKey || ''), {
+      headers: {
+        'X-Admin-Key': State.adminKey || '',
+        'X-Admin-User': State.adminUser || 'admin',
+      },
+    });
+    if (!r.ok) {
+      const res = await r.json().catch(() => ({}));
+      throw new Error(res.error || 'Template download failed.');
+    }
+    const url = URL.createObjectURL(await r.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = slot.toUpperCase() + '_Rebuild_Template.xlsx';
+    link.click();
+    URL.revokeObjectURL(url);
+    setRbStatus(slot.toUpperCase() + ' template downloaded.', 'ok');
+  } catch (e) {
+    setRbStatus(e.message || 'Template download failed.', 'err');
+  } finally {
+    button.disabled = false; button.textContent = original;
+  }
 }
 
 async function runRebuild() {
@@ -363,10 +395,11 @@ async function runRebuild() {
     if (r.ok && res.ok && res.data) {
       applyData(res.data);
       initProcess(); initTech(); buildCustHeader(); renderCustTable(); renderCustPackages();
-      setRbStatus('✅ Rebuild complete — the platform data has been overwritten.', 'ok');
+      setRbStatus('Rebuild complete. Pre-rebuild backup: ' + ((res.backup && res.backup.id) || 'created'), 'ok');
       renderRbResult(res);
       toast(`Platform rebuilt · ${res.summary.objects} objects`);
       initRebuild();
+      initBackups();
     } else {
       setRbStatus(res.error || 'Rebuild failed.', 'err');
     }
@@ -389,7 +422,166 @@ function renderRbResult(res) {
   ];
   Object.entries(saved).forEach(([k, v]) =>
     rows.push(`<div class="li"><span class="lk">Uploaded · ${esc(k)}</span><b>${esc(v.uploaded)}</b></div>`));
+  if (res.backup && res.backup.id)
+    rows.push(`<div class="li"><span class="lk">Safety backup</span><b>${esc(res.backup.id)}</b></div>`);
   el.innerHTML = rows.join('');
+}
+
+/* ===================== BACKUP / RESTORE (admin) ===================== */
+async function initBackups() {
+  const list = document.getElementById('backupList');
+  if (!list || !State.adminKey) return;
+  const create = document.getElementById('backupCreate');
+  const refresh = document.getElementById('backupRefresh');
+  if (create) create.onclick = createBackup;
+  if (refresh) refresh.onclick = loadBackups;
+  await loadBackups();
+}
+
+async function loadBackups() {
+  const list = document.getElementById('backupList');
+  if (!list) return;
+  list.innerHTML = '<span class="muted">Loading backups…</span>';
+  try {
+    const r = await fetch('/api/backups?key=' + encodeURIComponent(State.adminKey || ''), {
+      headers: { 'X-Admin-Key': State.adminKey || '' }, cache: 'no-store',
+    });
+    const res = await r.json().catch(() => ({}));
+    if (!r.ok || !res.ok) throw new Error(res.error || 'Could not load backups.');
+    renderBackups(res.backups || []);
+  } catch (e) {
+    list.innerHTML = `<span class="muted">${esc(e.message || 'Could not load backups.')}</span>`;
+  }
+}
+
+function renderBackups(backups) {
+  const list = document.getElementById('backupList');
+  if (!list) return;
+  if (!backups.length) {
+    list.innerHTML = '<span class="muted">No backups yet. Create one before changing platform data.</span>';
+    return;
+  }
+  list.innerHTML = backups.map(backup => `
+    <div class="backup-row">
+      <div class="backup-meta">
+        <div class="backup-title">${esc(backup.created || backup.id)}</div>
+        <div class="backup-detail">${esc(backup.reason || 'manual')} · by ${esc(backup.by || 'admin')} · ${(backup.files || []).length} files · ${fmtBytes(backup.bytes)}</div>
+        <div class="backup-detail mono">${esc(backup.id)}</div>
+      </div>
+      <div class="backup-actions">
+        <button class="btn backup-download" data-id="${esc(backup.id)}" title="Download backup ZIP">↓ Download</button>
+        <button class="btn backup-restore" data-id="${esc(backup.id)}">Restore</button>
+        <button class="btn backup-delete" data-id="${esc(backup.id)}" title="Permanently delete this backup">Delete</button>
+      </div>
+    </div>`).join('');
+  list.querySelectorAll('.backup-download').forEach(button => {
+    button.onclick = () => downloadBackup(button.dataset.id, button);
+  });
+  list.querySelectorAll('.backup-restore').forEach(button => {
+    button.onclick = () => restoreBackup(button.dataset.id, button);
+  });
+  list.querySelectorAll('.backup-delete').forEach(button => {
+    button.onclick = () => deleteBackup(button.dataset.id, button);
+  });
+}
+
+async function createBackup() {
+  const button = document.getElementById('backupCreate');
+  const reason = (document.getElementById('backupReason').value || '').trim();
+  const original = button.innerHTML;
+  button.disabled = true; button.innerHTML = '<span class="spin"></span> Creating…';
+  setBackupStatus('Creating a complete timestamped snapshot…', '');
+  try {
+    const r = await fetch('/api/backups?key=' + encodeURIComponent(State.adminKey || ''), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': State.adminKey || '' },
+      body: JSON.stringify({ reason: reason || 'manual', by: State.adminUser || 'admin' }),
+    });
+    const res = await r.json().catch(() => ({}));
+    if (!r.ok || !res.ok) throw new Error(res.error || 'Backup failed.');
+    document.getElementById('backupReason').value = '';
+    setBackupStatus('Backup created: ' + res.backup.id, 'ok');
+    toast('Full data backup created');
+    await loadBackups();
+  } catch (e) {
+    setBackupStatus(e.message || 'Backup failed.', 'err');
+  } finally {
+    button.disabled = false; button.innerHTML = original;
+  }
+}
+
+async function downloadBackup(backupId, button) {
+  const original = button.innerHTML;
+  button.disabled = true; button.textContent = 'Preparing…';
+  try {
+    const r = await fetch('/api/backups/' + encodeURIComponent(backupId) + '/download', {
+      headers: { 'X-Admin-Key': State.adminKey || '' },
+    });
+    if (!r.ok) throw new Error('Download failed.');
+    const url = URL.createObjectURL(await r.blob());
+    const link = document.createElement('a');
+    link.href = url; link.download = backupId + '.zip'; link.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    setBackupStatus(e.message || 'Download failed.', 'err');
+  } finally {
+    button.disabled = false; button.innerHTML = original;
+  }
+}
+
+async function restoreBackup(backupId, button) {
+  if (!confirm('Restore the entire application data state from ' + backupId + '?\n\nA safety backup of the current state will be created first.')) return;
+  const original = button.innerHTML;
+  button.disabled = true; button.innerHTML = '<span class="spin"></span> Restoring…';
+  setBackupStatus('Validating and restoring ' + backupId + '…', '');
+  try {
+    const r = await fetch('/api/backups/' + encodeURIComponent(backupId) + '/restore?key=' + encodeURIComponent(State.adminKey || ''), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': State.adminKey || '' },
+      body: JSON.stringify({ by: State.adminUser || 'admin' }),
+    });
+    const res = await r.json().catch(() => ({}));
+    if (!r.ok || !res.ok) throw new Error(res.error || 'Restore failed.');
+    applyData(res.data);
+    initProcess(); initTech(); buildCustHeader(); renderCustTable(); renderCustPackages();
+    setBackupStatus('Restore complete. Previous state saved as ' + res.safety_backup.id, 'ok');
+    toast('Application data restored');
+    await loadBackups();
+  } catch (e) {
+    setBackupStatus(e.message || 'Restore failed.', 'err');
+  } finally {
+    button.disabled = false; button.innerHTML = original;
+  }
+}
+
+async function deleteBackup(backupId, button) {
+  if (!confirm('Permanently delete ' + backupId + '?\n\nThis backup cannot be restored after deletion.')) return;
+  const original = button.innerHTML;
+  button.disabled = true; button.innerHTML = '<span class="spin"></span> Deleting…';
+  setBackupStatus('Deleting ' + backupId + '…', '');
+  try {
+    const r = await fetch('/api/backups/' + encodeURIComponent(backupId) + '?key=' + encodeURIComponent(State.adminKey || ''), {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': State.adminKey || '' },
+      body: JSON.stringify({ by: State.adminUser || 'admin' }),
+    });
+    const res = await r.json().catch(() => ({}));
+    if (!r.ok || !res.ok) throw new Error(res.error || 'Delete failed.');
+    setBackupStatus('Backup deleted: ' + backupId, 'ok');
+    toast('Backup deleted');
+    await loadBackups();
+  } catch (e) {
+    setBackupStatus(e.message || 'Delete failed.', 'err');
+    button.disabled = false; button.innerHTML = original;
+  }
+}
+
+function setBackupStatus(message, kind) {
+  const status = document.getElementById('backupStatus');
+  if (!status) return;
+  if (!message) { status.style.display = 'none'; status.textContent = ''; return; }
+  status.style.display = 'block'; status.textContent = message;
+  status.style.color = kind === 'err' ? '#ffb3bd' : (kind === 'ok' ? '#8fe3a8' : 'var(--muted)');
 }
 
 function setRbStatus(msg, kind) {
@@ -473,6 +665,7 @@ function initTabs() {
       track('tab', { view: v });
       if (v === 'depmap') renderDepGraph();
       if (v === 'admin') renderAdminCharts();
+      if (v === 'backup') initBackups();
     });
   });
 }
@@ -3164,9 +3357,12 @@ function initAdmin() {
     if (tab) tab.style.display = '';
     const rtab = document.getElementById('tabRebuild');
     if (rtab) rtab.style.display = '';
+    const btab = document.getElementById('tabBackup');
+    if (btab) btab.style.display = '';
     buildCustHeader();          // reveal the admin-only Edit column
     renderCustTable();
     initRebuild();
+    initBackups();
     renderAdminKpisLists();
     const rb = document.getElementById('admRefresh');
     if (rb) rb.onclick = async () => { await loadAdminMetrics(); renderAdminKpisLists(); renderAdminCharts(); toast('Admin metrics refreshed'); };

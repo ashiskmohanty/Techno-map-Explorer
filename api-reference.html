@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SAP Knowledge Copilot | API Reference</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: false, theme: "base", themeVariables: {
+      primaryColor: "#e8f3f0", primaryTextColor: "#17332d", primaryBorderColor: "#24806d",
+      lineColor: "#526963", secondaryColor: "#fff4d6", tertiaryColor: "#f5f7f6", fontFamily: "Aptos, Segoe UI, sans-serif"
+    }});
+    const renderDiagrams = () => {
+      mermaid.run({
+        nodes: document.querySelectorAll(".view:not([hidden]) .mermaid:not([data-processed])")
+      }).catch(error => console.error("Mermaid rendering failed", error));
+    };
+    document.addEventListener("diagrams-visible", renderDiagrams);
+    if (document.querySelector(".view:not([hidden]) .mermaid")) renderDiagrams();
+  </script>
+  <style>
+    :root { --ink:#18312c; --muted:#60736e; --paper:#f3f6f4; --panel:#fff; --line:#d8e1de; --green:#176b5a; --gold:#e8a51f; --navy:#17364a; --red:#a23b3b; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family:Aptos,"Segoe UI",sans-serif; line-height:1.55; }
+    header { color:#fff; background:linear-gradient(120deg,#102e29 0%,#176b5a 58%,#c78a12 160%); padding:34px max(24px,calc((100vw - 1240px)/2)); }
+    .eyebrow { color:#a8d9cf; text-transform:uppercase; letter-spacing:1.5px; font-size:12px; font-weight:800; }
+    h1 { margin:5px 0 6px; font:700 clamp(30px,5vw,54px)/1.05 Georgia,serif; letter-spacing:0; }
+    header p { max-width:720px; margin:0; color:#dbeae6; }
+    .stats { display:flex; flex-wrap:wrap; gap:9px; margin-top:20px; }
+    .stat { padding:7px 11px; border:1px solid #ffffff3d; background:#ffffff12; font-size:13px; }
+    nav { position:sticky; top:0; z-index:5; display:flex; justify-content:center; gap:4px; padding:9px 16px; background:#fff; border-bottom:1px solid var(--line); }
+    .tab { border:0; background:transparent; color:var(--muted); padding:10px 18px; font:700 14px inherit; cursor:pointer; border-bottom:3px solid transparent; }
+    .tab.active { color:var(--green); border-color:var(--gold); }
+    main { width:min(1240px,calc(100% - 32px)); margin:28px auto 60px; }
+    .view[hidden] { display:none; }
+    .toolbar { display:grid; grid-template-columns:minmax(220px,1fr) minmax(180px,280px); gap:12px; margin-bottom:20px; }
+    input,select { width:100%; padding:12px 13px; border:1px solid var(--line); background:#fff; color:var(--ink); font:inherit; }
+    .group { margin:28px 0 36px; }
+    .group-head { display:flex; align-items:end; justify-content:space-between; gap:12px; padding-bottom:8px; border-bottom:2px solid var(--ink); }
+    h2 { margin:0; font:700 25px Georgia,serif; letter-spacing:0; }
+    h3 { margin:0; font-size:16px; letter-spacing:0; }
+    .count { color:var(--muted); font-size:13px; }
+    .api-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+    .api { min-width:0; padding:17px; background:var(--panel); border:1px solid var(--line); border-top:3px solid var(--green); }
+    .route { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; }
+    code { overflow-wrap:anywhere; font:700 13px Consolas,monospace; color:var(--navy); }
+    .method,.access { display:inline-block; padding:3px 7px; color:#fff; background:var(--green); font:800 10px Consolas,monospace; }
+    .method.write { background:var(--navy); }
+    .method.delete { background:var(--red); }
+    .access { margin-left:auto; color:var(--ink); background:#fff0c9; }
+    .access.admin { color:#fff; background:var(--red); }
+    dl { display:grid; grid-template-columns:92px 1fr; gap:7px 10px; margin:0; font-size:14px; }
+    dt { color:var(--muted); font-weight:700; }
+    dd { min-width:0; margin:0; }
+    .intro { max-width:830px; color:var(--muted); }
+    .scenario-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:20px 0 34px; }
+    .scenario { padding:18px; background:#fff; border-left:4px solid var(--gold); }
+    .scenario p { margin:8px 0 0; color:var(--muted); font-size:14px; }
+    .diagram { min-width:0; margin:18px 0; padding:20px; overflow-x:auto; background:#fff; border:1px solid var(--line); }
+    .diagram h3 { margin-bottom:5px; }
+    .diagram > p { margin:0 0 15px; color:var(--muted); font-size:14px; }
+    .mermaid { min-width:620px; text-align:center; }
+    .note { margin-top:24px; padding:17px; border-left:4px solid var(--red); background:#fff; }
+    .data-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:20px 0 28px; }
+    .data-summary article { padding:18px; background:#fff; border-top:3px solid var(--green); }
+    .data-summary strong { display:block; margin-bottom:5px; font-size:18px; }
+    .data-summary span { color:var(--muted); font-size:14px; }
+    .table-wrap { margin:16px 0 28px; overflow-x:auto; border:1px solid var(--line); background:#fff; }
+    table { width:100%; min-width:900px; border-collapse:collapse; font-size:14px; }
+    th,td { padding:12px 14px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); }
+    th { color:#fff; background:var(--navy); font-size:12px; text-transform:uppercase; }
+    tbody tr:last-child td { border-bottom:0; }
+    td:first-child { white-space:nowrap; }
+    .path { margin:14px 0 24px; padding:15px; overflow-wrap:anywhere; background:#e8f3f0; border-left:4px solid var(--green); }
+    footer { padding:24px; text-align:center; color:var(--muted); font-size:13px; }
+    @media (max-width:850px) { .api-grid,.scenario-grid,.data-summary { grid-template-columns:1fr; } }
+    @media (max-width:580px) { main { width:min(100% - 20px,1240px); } header { padding:25px 18px; } nav { justify-content:stretch; } .tab { flex:1; padding:9px 5px; } .toolbar { grid-template-columns:1fr; } dl { grid-template-columns:1fr; gap:2px; } dd { margin-bottom:7px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">SAP Knowledge Copilot</div>
+    <h1>API reference &amp; flow map</h1>
+    <p>A technical catalogue of the Flask service surface, its responsibilities, local stores, SAP integrations, optional LLM, and end-to-end usage flows.</p>
+    <div class="stats"><span class="stat">38 unique paths</span><span class="stat">8 capability groups</span><span class="stat">RFC + HTTP/ADT</span><span class="stat">File-backed persistence</span></div>
+  </header>
+  <nav aria-label="Document views">
+    <button class="tab active" data-view="catalogue" aria-selected="true">API Catalogue</button>
+    <button class="tab" data-view="architecture" aria-selected="false">Usage &amp; Architecture</button>
+    <button class="tab" data-view="data-layer" aria-selected="false">Data Layer</button>
+  </nav>
+  <main>
+    <section id="catalogue" class="view">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search path, description, task or logic" aria-label="Search APIs">
+        <select id="groupFilter" aria-label="Filter by group"><option value="">All capability groups</option></select>
+      </div>
+      <div id="catalogueBody"></div>
+    </section>
+    <section id="architecture" class="view" hidden>
+      <h2>How the APIs are used</h2>
+      <p class="intro">The browser performs deterministic ranking over the loaded repository. Flask provides data, persistence, SAP access and administrative operations. The LLM is optional and limited to intent interpretation.</p>
+      <div class="scenario-grid">
+        <article class="scenario"><h3>Explore knowledge</h3><p>Load the repository, rank objects locally, optionally refine intent with an LLM, then enrich results with live SAP evidence.</p></article>
+        <article class="scenario"><h3>Trace impact</h3><p>Combine local planning links with SAP incoming, outgoing and method-level dependencies to map change impact.</p></article>
+        <article class="scenario"><h3>Maintain knowledge</h3><p>Refresh source data, add or edit objects, retain verified teachings, capture feedback and review usage metrics.</p></article>
+      </div>
+      <article class="diagram"><h3>Overall technical architecture</h3><p>High-level runtime boundaries and data movement.</p><pre class="mermaid">
+flowchart TB
+  U[User] --> B[Browser UI: index.html + app.js]
+  B -->|Repository, assistant, admin requests| F[Flask API: app.py]
+  B -->|Deterministic ranking| R[(In-memory repository)]
+  F --> D[(data.json / data.js / Excel)]
+  F --> L[(corrections / feedback / usage / audit)]
+  F -->|RFC| S1[SAP Application Server]
+  F -->|HTTP: ADT / OData| S2[SAP Gateway and ADT]
+  F -.->|Optional intent classification| AI[Azure OpenAI or compatible LLM]
+  D --> R
+      </pre></article>
+      <article class="diagram"><h3>Repository refresh</h3><p>The refresh endpoint uses ordered fallbacks so local exploration remains available when a live connector is unavailable.</p><pre class="mermaid">
+flowchart LR
+  A[POST /api/refresh] --> B{RFC available?}
+  B -->|Yes| C[Read SAP via pyrfc]
+  B -->|No| D{ADT configured?}
+  D -->|Yes| E[Read SAP over HTTP/ADT]
+  D -->|No| F[Rebuild from Excel]
+  C --> G[Normalize and merge]
+  E --> G
+  F --> G
+  G --> H[(data.json + data.js)]
+  G --> I[(Excel snapshot)]
+  H --> J[GET /api/data]
+      </pre></article>
+      <article class="diagram"><h3>Object Finder request</h3><p>Grounding comes from repository objects and SAP evidence; the optional model only improves interpretation.</p><pre class="mermaid">
+sequenceDiagram
+  actor User
+  participant UI as Object Finder
+  participant API as Flask API
+  participant LLM as Optional LLM
+  participant Repo as Local Repository
+  participant SAP as SAP ADT
+  User->>UI: Ask a business or technical question
+  UI->>UI: Detect intent locally
+  opt LLM configured
+    UI->>API: POST /api/assistant/llm
+    API->>LLM: Classify intent and keywords
+    LLM-->>UI: Structured interpretation
+  end
+  UI->>Repo: Rank known objects
+  opt Live search enabled
+    UI->>API: POST /api/assistant/sapsearch
+    API->>SAP: Repository search
+    SAP-->>UI: Real SAP objects
+    UI->>API: POST /api/assistant/code
+    API->>SAP: Search source comments
+    SAP-->>UI: Confirming evidence
+  end
+  UI-->>User: Grounded ranked answer
+      </pre></article>
+      <article class="diagram"><h3>Dependency analysis</h3><p>Several APIs contribute complementary edges to the same impact map.</p><pre class="mermaid">
+flowchart LR
+  O[Selected object] --> W[POST /api/sap/whereused]
+  O --> U[POST /api/sap/uses]
+  O --> C[POST /api/sap/classmap]
+  O --> P[POST /api/sap/planlinks]
+  O --> E[POST /api/sap/explain]
+  W --> G[Unified dependency graph]
+  U --> G
+  C --> G
+  P --> G
+  E --> X[Context panel]
+      </pre></article>
+      <article class="diagram"><h3>Teaching consolidation</h3><p>A teaching is a retained correction rule, not model training.</p><pre class="mermaid">
+flowchart LR
+  A[Verified user answer] --> B[POST /api/assistant/teach]
+  B --> C[Normalize question and keywords]
+  C --> D[(corrections.json)]
+  D --> E[GET /api/assistant/teachings]
+  E --> F[Match future questions]
+  F --> G[Place verified object first]
+  H[User feedback] --> I[POST /api/assistant/feedback]
+  I --> J[(feedback.json)]
+      </pre></article>
+      <article class="diagram"><h3>Telemetry and administration</h3><p>Browser events and change records feed operational metrics and audit views.</p><pre class="mermaid">
+flowchart LR
+  B[Browser actions] --> T[POST /api/track]
+  T --> U[(usage.jsonl)]
+  A[Admin changes] --> L[(audit_log.jsonl)]
+  U --> M[GET /api/admin/metrics]
+  L --> M
+  D[(Repository / feedback / teachings)] --> M
+  L --> Q[GET /api/admin/audit]
+  M --> K[Admin KPI dashboard]
+  Q --> K
+      </pre></article>
+      <div class="note"><strong>Production access note.</strong> Admin metrics, audit, rebuild and object editing use the admin-key check. Other write endpoints remain public in the current implementation and should receive authenticated role protection before broad shared deployment.</div>
+    </section>
+    <section id="data-layer" class="view" hidden>
+      <h2>Data Layer</h2>
+      <p class="intro">This application does not use SQL, NoSQL, or a separate database server. Its data layer is a collection of JSON, JSONL, JavaScript and Excel files read by Flask from the application filesystem.</p>
+      <div class="data-summary">
+        <article><strong>Database type</strong><span>File-backed local persistence. JSON holds structured state, JSONL holds append-only events, and Excel provides rebuild inputs and exports.</span></article>
+        <article><strong>Default location</strong><span>The same directory as <code>app.py</code>. In this workspace that is the <code>PS - Process Explorer</code> project folder.</span></article>
+        <article><strong>Runtime access</strong><span>The browser calls Flask APIs. Flask reads, merges and writes files; the browser normally does not modify storage files directly.</span></article>
+      </div>
+      <div class="path"><strong>Current application root:</strong><br><code>C:\MS - Surface\Agent in VScode -1\PS - Process Explorer</code><br><span class="count">In a container or another deployment, the default location moves with <code>app.py</code>. Environment variables can redirect several writable stores to shared or durable storage.</span></div>
+
+      <h2>What is stored</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Store</th><th>Format</th><th>Data stored</th><th>How it is read / used</th><th>Location override</th></tr></thead>
+          <tbody>
+            <tr><td><code>data.json</code></td><td>JSON</td><td>Main knowledge repository: SAP/BW objects, metadata, process areas, dependencies, statistics and package information.</td><td><code>load_or_build()</code> loads it for <code>GET /api/data</code>. If absent, <code>build_data.py</code> creates it.</td><td>Fixed under application root</td></tr>
+            <tr><td><code>data.js</code></td><td>JavaScript data bundle</td><td>Generated fallback copy of repository data for non-API/static loading.</td><td>The browser uses <code>window.__PSPE_DATA__</code> only after API and direct JSON loading fail.</td><td>Fixed under application root</td></tr>
+            <tr><td><code>manual_objects.json</code></td><td>JSON array</td><td>Objects manually added by users: name, domain, category, process, package, author and description.</td><td>Merged into the repository on every <code>/api/data</code> read.</td><td><code>PSPE_MANUAL_FILE</code></td></tr>
+            <tr><td><code>object_edits.json</code></td><td>JSON object</td><td>Admin overrides keyed by object name: category, process and primary area.</td><td>Applied in memory after manual objects are merged.</td><td><code>PSPE_EDITS_FILE</code></td></tr>
+            <tr><td><code>rspls_sequence.json</code></td><td>JSON</td><td>Authoritative planning-sequence steps, planning functions and filters.</td><td>Enriches known BW planning objects and dependency edges during repository loading.</td><td><code>PSPE_RSPLS_FILE</code></td></tr>
+            <tr><td><code>planfunc_class.json</code> and <code>fox_formulas.json</code></td><td>JSON</td><td>Planning-function class mappings and locally indexed FOX formulas.</td><td>Overlay planning relationships, formula nodes and flags in the served repository.</td><td>Application-root files</td></tr>
+            <tr><td><code>corrections.json</code></td><td>JSON array</td><td>Verified teachings: question, normalized keywords, correct object, type, note, author and timestamp.</td><td><code>GET /api/assistant/teachings</code> loads rules used to prioritize future answers.</td><td><code>PSPE_CORR_FILE</code>; may point to a shared network path</td></tr>
+            <tr><td><code>feedback.json</code></td><td>JSON array</td><td>Negative ranking feedback: keywords, object, down/hide action, author and timestamp.</td><td><code>GET /api/assistant/feedback</code> loads signals used to demote or hide matches.</td><td><code>PSPE_FB_FILE</code>; otherwise beside corrections</td></tr>
+            <tr><td><code>usage.jsonl</code></td><td>JSON Lines</td><td>Timestamped usage events such as queries, tabs, drawers, exports, teaching and feedback.</td><td>Recent lines are aggregated by <code>GET /api/admin/metrics</code>.</td><td><code>PSPE_USAGE_FILE</code>; otherwise beside corrections</td></tr>
+            <tr><td><code>audit_log.jsonl</code></td><td>JSON Lines</td><td>Append-only administrative change records including rebuilds and object edits.</td><td>Read newest-first by <code>GET /api/admin/audit</code> and included in metrics.</td><td><code>PSPE_AUDIT_FILE</code></td></tr>
+            <tr><td><code>sap_config.json</code>, <code>sap_packages.json</code>, <code>admin_config.json</code></td><td>JSON</td><td>SAP connector settings, package search scope and the generated admin key.</td><td>Loaded by connection, refresh and admin authorization helpers.</td><td>Packages: <code>PSPE_PKGS_FILE</code>; SAP credentials may also use environment variables</td></tr>
+            <tr><td><code>*.xlsx</code> and <code>exports/</code></td><td>Excel</td><td>ABAP/BW/BPML source workbooks, rebuild inputs and live SAP export snapshots.</td><td><code>build_data.py</code> converts source workbooks into repository JSON; refresh/export APIs create or download snapshots.</td><td>Application root and exports folder</td></tr>
+            <tr><td><code>backups/*.zip</code></td><td>ZIP with JSON manifest</td><td>Timestamped full-state snapshots of repository data, source workbooks, mappings, teachings, feedback and logs.</td><td>Backup APIs list, create, download and restore snapshots. Rebuild and restore create automatic safety backups.</td><td>Application-root <code>backups</code> folder</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <article class="diagram"><h3>Repository fetch and merge flow</h3><p>The API returns a composed in-memory view; overlays do not directly rewrite the generated base repository during reads.</p><pre class="mermaid">
+flowchart LR
+  UI[Browser boot] -->|GET /api/data; no-store| API[Flask API]
+  API --> LOAD[load_or_build]
+  LOAD --> BASE[(data.json)]
+  BASE --> MERGE[In-memory merge]
+  MAN[(manual_objects.json)] --> MERGE
+  EDIT[(object_edits.json)] --> MERGE
+  PLAN[(RSPLS and planning JSON)] --> MERGE
+  FOX[(FOX formulas JSON)] --> MERGE
+  MERGE --> RESP[JSON response]
+  RESP --> STATE[Browser State and local ranking]
+  API -. fallback if missing .-> BUILD[build_data.py]
+  BUILD --> BASE
+      </pre></article>
+
+      <article class="diagram"><h3>Write and analytics flow</h3><p>Mutable JSON stores use a best-effort lock and atomic replacement. Event logs append one JSON record per line.</p><pre class="mermaid">
+flowchart TB
+  WRITE[Teaching, feedback, manual or edit API] --> LOCK[Acquire file lock]
+  LOCK --> READ[Read current JSON]
+  READ --> VALIDATE[Validate and update in memory]
+  VALIDATE --> TEMP[Write process-specific temporary file]
+  TEMP --> REPLACE[Atomic os.replace]
+  REPLACE --> JSON[(Updated JSON store)]
+  EVENT[Usage or admin event] --> APPEND[Append one JSON line]
+  APPEND --> LOGS[(usage.jsonl or audit_log.jsonl)]
+  JSON --> METRICS[Admin metrics aggregation]
+  LOGS --> METRICS
+      </pre></article>
+
+      <div class="note"><strong>Deployment and security note.</strong> Local files are suitable for this single-instance application, but container filesystems may be ephemeral and multiple app instances can contend for shared files. For production scale, place writable data on durable shared storage or migrate it to a transactional database. Treat <code>sap_config.json</code> and <code>admin_config.json</code> as secrets and do not expose them as public static assets.</div>
+    </section>
+  </main>
+  <footer>SAP Knowledge Copilot · AI-powered knowledge explorer for SAP</footer>
+  <script>
+    const apis = [
+      ["Repository & Refresh","GET","/api/data","Returns the complete merged repository.","Initial UI load and post-change reload.","Calls load_or_build and combines generated, manual and planning data.","Public"],
+      ["Repository & Refresh","POST","/api/refresh","Refreshes repository content from the best available source.","Synchronize current SAP objects and persist snapshots.","Attempts RFC, then HTTP/ADT, then Excel; writes JSON, JS and an export snapshot.","Public"],
+      ["Repository & Refresh","GET","/api/refresh/status","Reports the latest refresh state.","Display source, timestamp and snapshot availability.","Reads refresh metadata and filesystem details without initiating work.","Public"],
+      ["Repository & Refresh","GET","/api/refresh/export","Downloads the latest live-object workbook.","Export the current SAP snapshot for review.","Validates snapshot existence and returns it as an XLSX attachment.","Public"],
+      ["SAP Connectivity","GET","/api/sap/status","Returns sanitized connector readiness.","Populate the SAP connection status UI.","Inspects RFC and HTTP settings without exposing credentials.","Public"],
+      ["SAP Connectivity","GET / POST","/api/sap/packages","Reads or updates SAP package scope.","Control which custom packages are searched or refreshed.","GET returns normalized package filters; POST validates and persists them.","Public"],
+      ["SAP Connectivity","POST","/api/sap/config","Saves SAP connection configuration.","Configure RFC or HTTP/ADT from the UI.","Validates submitted fields, writes configuration and returns sanitized status.","Public"],
+      ["SAP Connectivity","POST","/api/sap/test","Tests a supplied or saved SAP connection.","Verify credentials and network reachability.","Selects RFC or HTTP connector and returns system details or a safe error.","Public"],
+      ["SAP Connectivity","POST","/api/sap/odata","Discovers custom OData services.","Find services matching a business or technical term.","Queries the SAP service catalogue and filters custom services by the request.","Public"],
+      ["Dependencies & Code","POST","/api/sap/whereused","Finds incoming references to objects.","Identify consumers affected by an object change.","Uses RFC where-used when available, with ADT usageReferences fallback.","Public"],
+      ["Dependencies & Code","POST","/api/sap/uses","Finds outgoing custom-object dependencies.","Understand what a program or class calls.","Reads ABAP source through ADT and matches known repository object names.","Public"],
+      ["Dependencies & Code","POST","/api/sap/classmap","Builds a method-level class dependency map.","Inspect large classes and method responsibilities.","Parses METHOD blocks and associates each method with referenced custom objects.","Public"],
+      ["Dependencies & Code","POST","/api/sap/explain","Extracts a concise source explanation.","Add technical context to impact analysis.","Returns the first ABAP signature and up to eight leading source comments.","Public"],
+      ["Dependencies & Code","POST","/api/sap/planlinks","Returns local BW planning relationships.","Map sequences to functions, filters and aggregation levels.","Looks up prebuilt planning links in the local repository; no live SAP call.","Public"],
+      ["Dependencies & Code","POST","/api/planfunc/fox","Returns a planning function's FOX formula.","Review planning logic without opening SAP GUI.","Normalizes the function name and retrieves its locally indexed formula.","Public"],
+      ["Assistant & Live Search","POST","/api/assistant/code","Searches ABAP or FOX comments for evidence.","Confirm why a ranked object matches a question.","Searches source comments using keywords and returns bounded evidence snippets.","Public"],
+      ["Assistant & Live Search","GET / POST","/api/assistant/llm","Reports LLM status or interprets a query.","Optionally refine intent, action and keywords.","GET returns provider readiness; POST calls llm.py and returns structured classification.","Public"],
+      ["Assistant & Live Search","POST","/api/assistant/sapsearch","Runs a live SAP repository search.","Supplement local results with current SAP objects.","Submits keyword and type filters to ADT search and normalizes returned objects.","Public"],
+      ["Teaching & Feedback","GET","/api/assistant/teachings","Returns retained verified corrections.","Load teaching rules before answering questions.","Reads and normalizes corrections.json under a file lock.","Public"],
+      ["Teaching & Feedback","POST","/api/assistant/teach","Stores a verified answer rule.","Teach the finder the correct object for a question.","Validates the object, derives normalized keywords, assigns an ID and persists it.","Public"],
+      ["Teaching & Feedback","DELETE","/api/assistant/teach/<tid>","Deletes one teaching by ID.","Remove an obsolete correction.","Locks the store, filters the matching ID and atomically rewrites the file.","Public"],
+      ["Teaching & Feedback","POST","/api/assistant/teach/delete","Deletes multiple teachings.","Clean up selected retained corrections.","Validates an ID list and atomically removes matching records under lock.","Public"],
+      ["Teaching & Feedback","GET / POST","/api/assistant/feedback","Reads or appends ranking feedback.","Retain up, down or hide signals for answers.","GET loads records; POST validates the signal and persists a timestamped entry.","Public"],
+      ["Object Management","GET","/api/objects/manual","Returns manually maintained objects.","Show locally added knowledge entries.","Reads manual_objects.json and returns normalized records.","Public"],
+      ["Object Management","POST","/api/objects/add","Adds a manual repository object.","Record an object absent from generated source data.","Validates required fields and duplicates, then atomically appends the object.","Public"],
+      ["Object Management","DELETE","/api/objects/manual/<name>","Deletes a manual object.","Remove an obsolete local object.","Decodes the object name, removes its record and rewrites the manual store.","Public"],
+      ["Object Management","POST","/api/objects/edit","Updates classification fields for an object.","Correct category or process-area ownership.","Checks admin access, stores the override and writes before/after audit data.","Admin key"],
+      ["Rebuild & Administration","GET","/api/rebuild/status","Reports rebuild workbook readiness.","Check expected inputs before rebuilding.","Checks admin access and returns workbook existence, size, time and package scope.","Admin key"],
+      ["Rebuild & Administration","POST","/api/rebuild","Rebuilds repository data from uploaded workbooks.","Replace source workbooks and regenerate the catalogue.","Validates XLSX uploads, backs up inputs, invokes build_data.py and audits the change.","Admin key"],
+      ["Rebuild & Administration","GET","/api/rebuild/template/<slot>","Downloads a blank schema-correct rebuild workbook.","Prepare ABAP, BW-IP or BPML input data for another team.","Generates an XLSX in memory from the parser's required sheets and columns without exposing current team data.","Admin key"],
+      ["Backup & Restore","GET / POST","/api/backups","Lists snapshots or creates a timestamped full-state backup.","Protect the current state before rebuild or maintenance.","Builds a versioned ZIP manifest from mutable data files and stores it under backups.","Admin key"],
+      ["Backup & Restore","DELETE","/api/backups/<backup_id>","Permanently deletes one snapshot.","Clear older backups that are no longer required.","Validates the backup ID, acquires the backup state lock, removes the ZIP and records an audit event.","Admin key"],
+      ["Backup & Restore","GET","/api/backups/<backup_id>/download","Downloads one backup archive.","Retain or transfer a restorable snapshot.","Validates the backup ID and streams the protected ZIP as an attachment.","Admin key"],
+      ["Backup & Restore","POST","/api/backups/<backup_id>/restore","Restores the complete mutable data state.","Return the application to a selected timestamped snapshot.","Validates ZIP members, creates a safety backup, stages files, atomically replaces state and reloads repository data.","Admin key"],
+      ["Telemetry & Metrics","POST","/api/track","Appends a browser usage event.","Measure searches, views, exports and interactions.","Validates a small event payload and appends timestamped JSONL telemetry.","Public"],
+      ["Telemetry & Metrics","GET","/api/admin/status","Checks whether the supplied admin key is valid.","Unlock protected administration controls.","Runs the common admin-key validator and returns authorization state.","Admin key"],
+      ["Telemetry & Metrics","GET","/api/admin/metrics","Returns operational KPIs and modeled benefits.","Populate the admin analytics dashboard.","Aggregates usage, audit, repository, teaching and feedback stores into metrics.","Admin key"],
+      ["Telemetry & Metrics","GET","/api/admin/audit","Returns recent administrative changes.","Review edits, refreshes and rebuild activity.","Checks admin access, reads JSONL audit records and returns recent entries.","Admin key"]
+    ];
+
+    const catalogueBody = document.querySelector("#catalogueBody");
+    const search = document.querySelector("#search");
+    const groupFilter = document.querySelector("#groupFilter");
+    const groups = [...new Set(apis.map(api => api[0]))];
+    groups.forEach(group => groupFilter.add(new Option(group, group)));
+
+    function methodClass(method) {
+      if (method === "DELETE") return "delete";
+      return method.includes("POST") ? "write" : "";
+    }
+
+    function render() {
+      const term = search.value.trim().toLowerCase();
+      const selected = groupFilter.value;
+      catalogueBody.innerHTML = "";
+      groups.forEach(group => {
+        const matches = apis.filter(api => api[0] === group && (!selected || selected === group) && (!term || api.join(" ").toLowerCase().includes(term)));
+        if (!matches.length) return;
+        const section = document.createElement("section");
+        section.className = "group";
+        section.innerHTML = `<div class="group-head"><h2>${group}</h2><span class="count">${matches.length} path${matches.length === 1 ? "" : "s"}</span></div><div class="api-grid"></div>`;
+        const grid = section.querySelector(".api-grid");
+        matches.forEach(([,method,path,description,task,logic,access]) => {
+          const card = document.createElement("article");
+          card.className = "api";
+          card.innerHTML = `<div class="route"><span class="method ${methodClass(method)}">${method}</span><code>${path}</code><span class="access ${access === "Admin key" ? "admin" : ""}">${access}</span></div><dl><dt>Description</dt><dd>${description}</dd><dt>Task / use</dt><dd>${task}</dd><dt>Program logic</dt><dd>${logic}</dd></dl>`;
+          grid.appendChild(card);
+        });
+        catalogueBody.appendChild(section);
+      });
+      if (!catalogueBody.children.length) catalogueBody.innerHTML = '<p class="intro">No APIs match the current filters.</p>';
+    }
+
+    document.querySelectorAll(".tab").forEach(button => button.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(tab => { tab.classList.remove("active"); tab.setAttribute("aria-selected", "false"); });
+      document.querySelectorAll(".view").forEach(view => view.hidden = true);
+      button.classList.add("active");
+      button.setAttribute("aria-selected", "true");
+      document.querySelector(`#${button.dataset.view}`).hidden = false;
+      if (document.querySelector(`#${button.dataset.view} .mermaid`)) document.dispatchEvent(new Event("diagrams-visible"));
+      window.scrollTo({ top: document.querySelector("nav").offsetTop, behavior:"smooth" });
+    }));
+    search.addEventListener("input", render);
+    groupFilter.addEventListener("change", render);
+    render();
+  </script>
+</body>
+</html>

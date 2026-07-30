@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Business benefits and ROI assessment for SAP Knowledge Copilot.">
+<title>SAP Knowledge Copilot | Business Benefit &amp; ROI</title>
+<style>
+  :root {
+    --ink: #17202a;
+    --muted: #5d6874;
+    --paper: #f7f6f2;
+    --surface: #ffffff;
+    --line: #d9ddd8;
+    --navy: #16324f;
+    --teal: #087f78;
+    --teal-soft: #dff3ef;
+    --gold: #c58a24;
+    --gold-soft: #fbf0d8;
+    --coral: #c95743;
+    --blue-soft: #e7eff7;
+    --shadow: 0 18px 45px rgba(22, 50, 79, 0.09);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      linear-gradient(90deg, rgba(22, 50, 79, 0.025) 1px, transparent 1px),
+      linear-gradient(rgba(22, 50, 79, 0.025) 1px, transparent 1px),
+      var(--paper);
+    background-size: 28px 28px;
+    font-family: Aptos, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  a { color: inherit; }
+  button, input { font: inherit; }
+  .shell { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid rgba(217, 221, 216, 0.85);
+    background: rgba(247, 246, 242, 0.92);
+    backdrop-filter: blur(12px);
+  }
+  .topbar-inner {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  .wordmark { display: flex; align-items: center; gap: 10px; color: var(--navy); }
+  .wordmark-copy { display: flex; flex-direction: column; line-height: 1.15; }
+  .wordmark-copy strong { font-weight: 750; }
+  .wordmark-copy small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+  .mark {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    background: var(--navy);
+    color: white;
+    font-family: Georgia, serif;
+    font-weight: 700;
+  }
+  nav { display: flex; align-items: center; gap: 18px; }
+  nav a { color: var(--muted); font-size: 13px; font-weight: 650; text-decoration: none; }
+  nav a:hover { color: var(--teal); }
+  .print-btn {
+    border: 1px solid var(--navy);
+    background: transparent;
+    color: var(--navy);
+    padding: 7px 11px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .hero {
+    position: relative;
+    min-height: 540px;
+    display: grid;
+    align-items: center;
+    overflow: hidden;
+    color: white;
+    background:
+      linear-gradient(105deg, rgba(15, 40, 62, 0.98) 0%, rgba(15, 40, 62, 0.92) 48%, rgba(8, 127, 120, 0.80) 100%),
+      repeating-linear-gradient(135deg, transparent 0 22px, rgba(255,255,255,.05) 22px 23px);
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 42%;
+    opacity: .28;
+    background:
+      linear-gradient(90deg, transparent 49%, rgba(255,255,255,.35) 50% 51%, transparent 52%),
+      linear-gradient(transparent 49%, rgba(255,255,255,.35) 50% 51%, transparent 52%);
+    background-size: 64px 64px;
+    clip-path: polygon(22% 0, 100% 0, 100% 100%, 0 100%);
+  }
+  .hero-inner { position: relative; z-index: 1; padding: 72px 0 66px; }
+  .eyebrow { margin: 0 0 18px; color: #9ee4dc; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.7px; }
+  h1, h2, h3 { letter-spacing: 0; }
+  h1 {
+    max-width: 820px;
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(42px, 7vw, 78px);
+    font-weight: 500;
+    line-height: 1.02;
+  }
+  .hero-copy { max-width: 720px; margin: 24px 0 0; color: #d6e3e9; font-size: 19px; }
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 34px; color: #b9d1d8; font-size: 13px; }
+  .hero-meta strong { color: white; }
+
+  main { padding: 62px 0 82px; }
+  section { scroll-margin-top: 78px; margin-bottom: 76px; }
+  .section-head { display: grid; grid-template-columns: 190px 1fr; gap: 34px; margin-bottom: 30px; }
+  .section-no { color: var(--teal); font-size: 12px; font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; }
+  h2 { margin: 0; color: var(--navy); font-family: Georgia, "Times New Roman", serif; font-size: clamp(30px, 4vw, 46px); font-weight: 500; line-height: 1.1; }
+  .lede { max-width: 790px; margin: 14px 0 0; color: var(--muted); font-size: 18px; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+  .kpi { min-height: 156px; padding: 24px; border-right: 1px solid var(--line); }
+  .kpi:last-child { border-right: 0; }
+  .kpi-label { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.1px; }
+  .kpi-value { margin-top: 8px; color: var(--navy); font-family: Georgia, serif; font-size: 42px; line-height: 1; }
+  .kpi-value.teal { color: var(--teal); }
+  .kpi-note { margin-top: 11px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .evidence-note { margin: 14px 0 0; color: var(--muted); font-size: 12px; }
+
+  .benefits { display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid var(--line); }
+  .benefit { display: grid; grid-template-columns: 58px 1fr; gap: 18px; padding: 30px 26px 30px 0; border-bottom: 1px solid var(--line); }
+  .benefit:nth-child(odd) { padding-right: 36px; border-right: 1px solid var(--line); }
+  .benefit:nth-child(even) { padding-left: 36px; }
+  .benefit-id { color: var(--gold); font-family: Georgia, serif; font-size: 30px; }
+  .benefit h3 { margin: 0 0 8px; color: var(--navy); font-size: 18px; }
+  .benefit p { margin: 0; color: var(--muted); font-size: 14px; }
+  .benefit strong { color: var(--ink); }
+
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 30px; }
+  .flow-step { position: relative; min-height: 146px; padding: 22px; color: white; background: var(--navy); border-right: 1px solid rgba(255,255,255,.18); }
+  .flow-step:nth-child(2) { background: #214b67; }
+  .flow-step:nth-child(3) { background: #167069; }
+  .flow-step:nth-child(4) { background: var(--teal); }
+  .flow-step small { color: #b8d5df; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; }
+  .flow-step b { display: block; margin-top: 10px; font-family: Georgia, serif; font-size: 21px; font-weight: 500; }
+
+  .method-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 22px; }
+  .method-grid > *, .calc-layout > * { min-width: 0; }
+  .panel { border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+  .panel-head { padding: 20px 24px; border-bottom: 1px solid var(--line); }
+  .panel-head h3 { margin: 0; color: var(--navy); font-size: 17px; }
+  .panel-body { padding: 24px; overflow-x: auto; }
+  .formula {
+    padding: 20px;
+    color: var(--navy);
+    background: var(--blue-soft);
+    font-family: "Cascadia Mono", Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+  .formula + .formula { margin-top: 10px; background: var(--teal-soft); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { color: var(--muted); font-size: 10px; text-align: left; text-transform: uppercase; letter-spacing: .9px; }
+  th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+  th:not(:first-child), td:not(:first-child) { text-align: right; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .total-row td { color: var(--navy); font-weight: 800; border-top: 2px solid var(--navy); }
+  .tag { display: inline-block; padding: 3px 8px; color: var(--teal); background: var(--teal-soft); font-size: 10px; font-weight: 850; text-transform: uppercase; letter-spacing: .7px; }
+
+  .calculator { border-top: 6px solid var(--teal); }
+  .calc-layout { display: grid; grid-template-columns: 1fr 360px; }
+  .controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 22px; padding: 26px; }
+  .control label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 7px; color: var(--muted); font-size: 12px; font-weight: 700; }
+  .control input[type="number"] { width: 100%; padding: 10px 12px; border: 1px solid var(--line); color: var(--ink); background: #fbfbf9; }
+  .control input:focus { outline: 2px solid var(--teal-soft); border-color: var(--teal); }
+  .results { display: flex; flex-direction: column; justify-content: center; padding: 28px; color: white; background: var(--navy); }
+  .result-label { color: #b8ced9; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+  .result-value { margin: 4px 0 22px; font-family: Georgia, serif; font-size: 40px; line-height: 1; }
+  .result-value:last-of-type { margin-bottom: 0; color: #8fe0d7; }
+  .calc-note { padding: 15px 26px; border-top: 1px solid var(--line); color: var(--muted); background: #fbfbf9; font-size: 12px; }
+
+  .callout { display: grid; grid-template-columns: 180px 1fr; gap: 28px; padding: 28px; border-left: 6px solid var(--gold); background: var(--gold-soft); }
+  .callout b { color: #6d4a0f; }
+  .callout p { margin: 0; color: #675b48; }
+  .roi-equation { color: var(--navy); font-family: Georgia, serif; font-size: 25px; line-height: 1.35; }
+
+  .roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .roadmap-item { padding: 24px; border-top: 4px solid var(--navy); background: var(--surface); box-shadow: var(--shadow); }
+  .roadmap-item:nth-child(2) { border-color: var(--teal); }
+  .roadmap-item:nth-child(3) { border-color: var(--gold); }
+  .roadmap-item small { color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+  .roadmap-item h3 { margin: 8px 0; color: var(--navy); font-size: 18px; }
+  .roadmap-item p { margin: 0; color: var(--muted); font-size: 13px; }
+
+  .assumptions { columns: 2; column-gap: 42px; margin: 0; padding-left: 20px; }
+  .assumptions li { break-inside: avoid; margin: 0 0 13px; padding-left: 5px; color: var(--muted); font-size: 13px; }
+
+  footer { padding: 34px 0; color: #b7c5ce; background: var(--navy); font-size: 12px; }
+  .footer-inner { display: flex; justify-content: space-between; gap: 24px; }
+
+  @media (max-width: 900px) {
+    nav a { display: none; }
+    .section-head { grid-template-columns: 1fr; gap: 8px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .kpi:nth-child(2) { border-right: 0; }
+    .kpi:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .benefits, .method-grid, .calc-layout, .roadmap { grid-template-columns: 1fr; }
+    .benefit, .benefit:nth-child(odd), .benefit:nth-child(even) { padding: 24px 0; border-right: 0; }
+    .flow { grid-template-columns: repeat(2, 1fr); }
+    .results { min-height: 260px; }
+  }
+  @media (max-width: 560px) {
+    .shell { width: min(100% - 24px, 1160px); }
+    .hero { min-height: 520px; }
+    .hero-inner { padding: 56px 0; }
+    .hero-copy { font-size: 16px; }
+    main { padding-top: 44px; }
+    section { margin-bottom: 56px; }
+    .kpi-grid, .flow, .controls { grid-template-columns: 1fr; }
+    .kpi { border-right: 0; border-bottom: 1px solid var(--line); }
+    .kpi:last-child { border-bottom: 0; }
+    .callout { grid-template-columns: 1fr; gap: 10px; }
+    .assumptions { columns: 1; }
+    .footer-inner { flex-direction: column; }
+  }
+
+  @media print {
+    @page { size: A4; margin: 14mm; }
+    body { background: white; font-size: 11pt; }
+    .topbar, .print-btn { display: none; }
+    .shell { width: 100%; }
+    .hero { min-height: 0; margin: -14mm -14mm 12mm; padding: 10mm 14mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .hero-inner { padding: 18mm 0; }
+    h1 { font-size: 38pt; }
+    main { padding: 0; }
+    section { margin-bottom: 12mm; break-inside: avoid; }
+    .panel, .kpi-grid, .roadmap-item { box-shadow: none; }
+    .calculator { display: none; }
+    footer { margin: 0 -14mm -14mm; padding: 8mm 14mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <div class="wordmark">
+      <span class="mark">PS</span>
+      <span class="wordmark-copy">
+        <strong>SAP Knowledge Copilot</strong>
+        <small>(AI-powered knowledge explorer for SAP)</small>
+      </span>
+    </div>
+    <nav aria-label="Document sections">
+      <a href="#benefits">Benefits</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#method">Method</a>
+      <a href="#calculator">Calculator</a>
+      <button class="print-btn" type="button" onclick="window.print()">Print / PDF</button>
+    </nav>
+  </div>
+</header>
+
+<header class="hero">
+  <div class="shell hero-inner">
+    <p class="eyebrow">Business case | SAP Project Systems</p>
+    <h1>Business Benefit &amp; ROI Assessment</h1>
+    <p class="hero-copy">SAP Knowledge Copilot turns fragmented SAP process and technical knowledge into a searchable, connected evidence base for faster discovery, safer change analysis, and reusable team learning.</p>
+    <div class="hero-meta">
+      <span><strong>Scope</strong> SAP MS1/122 PS and BW-IP landscape</span>
+      <span><strong>Assessment date</strong> 28 July 2026</span>
+      <span><strong>Status</strong> Current-state baseline</span>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+  <section id="evidence">
+    <div class="section-head">
+      <div class="section-no">01 | Executive view</div>
+      <div>
+        <h2>A credible early signal of operational value</h2>
+        <p class="lede">Observed adoption is still limited to two users and three active days, but the application already demonstrates broad repository coverage and repeat use. Savings below are modeled from tracked actions and deliberately discounted by 30%.</p>
+      </div>
+    </div>
+
+    <div class="kpi-grid" aria-label="Current performance indicators">
+      <article class="kpi">
+        <div class="kpi-label">Mapped repository</div>
+        <div class="kpi-value">2,356</div>
+        <div class="kpi-note">1,557 ABAP + 799 BW objects across 65 process areas</div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-label">Assistant match rate</div>
+        <div class="kpi-value teal">94%</div>
+        <div class="kpi-note">77 matched queries from 82 total questions</div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-label">Modeled effort saved</div>
+        <div class="kpi-value">62.2h</div>
+        <div class="kpi-note">After applying the 0.70 credibility factor</div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-label">Gross benefit estimate</div>
+        <div class="kpi-value teal">$2,488</div>
+        <div class="kpi-note">62.2 hours at a loaded rate of $40/hour</div>
+      </article>
+    </div>
+    <p class="evidence-note">Observed telemetry: 1,001 events, 2 users, 3 active days, 34 live SAP searches, 42 object-detail opens, 10 refreshes and 5 retained teachings. Repository snapshot generated 24 July 2026; usage observed through 28 July 2026.</p>
+  </section>
+
+  <section id="benefits">
+    <div class="section-head">
+      <div class="section-no">02 | Benefit case</div>
+      <div>
+        <h2>Value reaches beyond search time</h2>
+        <p class="lede">The strongest business case combines direct productivity with avoided delivery risk and retained institutional knowledge.</p>
+      </div>
+    </div>
+
+    <div class="benefits">
+      <article class="benefit">
+        <div class="benefit-id">01</div>
+        <div><h3>Faster technical discovery</h3><p>Natural-language search, filters, and process drill-down reduce time spent navigating transactions, spreadsheets, package lists, and disconnected documentation. <strong>Primary measure:</strong> successful queries and minutes to identify the correct object.</p></div>
+      </article>
+      <article class="benefit">
+        <div class="benefit-id">02</div>
+        <div><h3>Safer impact analysis</h3><p>Dependency maps, where-used traces, and ABAP/BW hierarchy reveal relationships before a change is designed. <strong>Primary measure:</strong> trace usage, escaped dependency defects, and rework hours.</p></div>
+      </article>
+      <article class="benefit">
+        <div class="benefit-id">03</div>
+        <div><h3>Reduced key-person dependency</h3><p>Corrections and team teachings turn individual knowledge into a shared, searchable asset. <strong>Primary measure:</strong> retained teachings, repeat-answer accuracy, and onboarding time.</p></div>
+      </article>
+      <article class="benefit">
+        <div class="benefit-id">04</div>
+        <div><h3>Faster ICM resolution</h3><p>Connected process context, object details, and dependency traces help support teams identify affected components and likely root causes sooner. <strong>Primary measure:</strong> mean time to resolution, investigation hours, and incident reopen rate.</p></div>
+      </article>
+      <article class="benefit">
+        <div class="benefit-id">05</div>
+        <div><h3>Quicker onboarding of new members</h3><p>A searchable view of processes, technical objects, and team teachings gives new members a guided path through the SAP landscape. <strong>Primary measure:</strong> time to independent delivery, training hours, and mentor effort.</p></div>
+      </article>
+      <article class="benefit">
+        <div class="benefit-id">06</div>
+        <div><h3>Overall reduction in maintenance cost</h3><p>Faster discovery, more reliable impact analysis, and reusable knowledge reduce recurring investigation, rework, and specialist support effort. <strong>Primary measure:</strong> maintenance hours, change rework, and cost per resolved request.</p></div>
+      </article>
+      <article class="benefit">
+        <div class="benefit-id">07</div>
+        <div><h3>Better change governance</h3><p>Usage, feedback, audit history, and repository refresh controls create an evidence trail for adoption and data quality. <strong>Primary measure:</strong> active users, feedback closure, refresh frequency, and audit completion.</p></div>
+      </article>
+    </div>
+
+    <div class="flow" aria-label="Value chain">
+      <div class="flow-step"><small>Input</small><b>Process and object data</b></div>
+      <div class="flow-step"><small>Capability</small><b>Search, trace, map, teach</b></div>
+      <div class="flow-step"><small>Outcome</small><b>Less effort and uncertainty</b></div>
+      <div class="flow-step"><small>Business value</small><b>Faster, safer delivery</b></div>
+    </div>
+  </section>
+
+  <section id="method">
+    <div class="section-head">
+      <div class="section-no">03 | ROI method</div>
+      <div>
+        <h2>Transparent, action-based estimation</h2>
+        <p class="lede">Each qualifying action is assigned a net manual-effort saving. The total is converted to hours, discounted for uncertainty, and valued at a loaded labor rate.</p>
+      </div>
+    </div>
+
+    <div class="method-grid">
+      <article class="panel">
+        <div class="panel-head"><h3>Current contribution breakdown</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Tracked action</th><th>Count</th><th>Min/action</th><th>Gross min</th></tr></thead>
+            <tbody>
+              <tr><td>Matched assistant query</td><td>77</td><td>14.5</td><td>1,116.5</td></tr>
+              <tr><td>Live SAP search</td><td>34</td><td>11</td><td>374</td></tr>
+              <tr><td>Where-used trace</td><td>27</td><td>38</td><td>1,026</td></tr>
+              <tr><td>Object detail opened</td><td>42</td><td>19</td><td>798</td></tr>
+              <tr><td>PDF export</td><td>9</td><td>59</td><td>531</td></tr>
+              <tr><td>Object add / edit</td><td>5</td><td>8</td><td>40</td></tr>
+              <tr><td>Repository refresh</td><td>10</td><td>118</td><td>1,180</td></tr>
+              <tr><td>Repository rebuild</td><td>1</td><td>235</td><td>235</td></tr>
+              <tr><td>Retained teaching</td><td>5</td><td>6</td><td>30</td></tr>
+              <tr class="total-row"><td>Total</td><td></td><td></td><td>5,330.5</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h3>Calculation</h3></div>
+        <div class="panel-body">
+          <p><span class="tag">Step 1</span></p>
+          <div class="formula">Gross effort = SUM(action count x net minutes saved)</div>
+          <p><span class="tag">Step 2</span></p>
+          <div class="formula">Credited hours = ROUND((5,330.5 / 60) x 0.70, 1)<br>= 62.2 hours</div>
+          <p><span class="tag">Step 3</span></p>
+          <div class="formula">Gross benefit = ROUND(62.2 x $40)<br>= $2,488</div>
+          <p class="evidence-note">Only matched assistant queries qualify. Generic visits, tab changes, clicks, plan links, and class-map events do not contribute to savings.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="calculator">
+    <div class="section-head">
+      <div class="section-no">04 | Scenario model</div>
+      <div>
+        <h2>Test the assumptions</h2>
+        <p class="lede">Change activity, rate, and confidence assumptions below. The baseline values reproduce the current application result and are not annualized.</p>
+      </div>
+    </div>
+
+    <div class="panel calculator">
+      <div class="calc-layout">
+        <div class="controls">
+          <div class="control"><label for="matched">Matched queries <span>14.5 min</span></label><input id="matched" type="number" min="0" value="77" data-minutes="14.5"></div>
+          <div class="control"><label for="live">Live SAP searches <span>11 min</span></label><input id="live" type="number" min="0" value="34" data-minutes="11"></div>
+          <div class="control"><label for="trace">Where-used traces <span>38 min</span></label><input id="trace" type="number" min="0" value="27" data-minutes="38"></div>
+          <div class="control"><label for="drawer">Object details <span>19 min</span></label><input id="drawer" type="number" min="0" value="42" data-minutes="19"></div>
+          <div class="control"><label for="pdf">PDF exports <span>59 min</span></label><input id="pdf" type="number" min="0" value="9" data-minutes="59"></div>
+          <div class="control"><label for="excel">Excel exports <span>29.5 min</span></label><input id="excel" type="number" min="0" value="0" data-minutes="29.5"></div>
+          <div class="control"><label for="changes">Object adds / edits <span>8 min</span></label><input id="changes" type="number" min="0" value="5" data-minutes="8"></div>
+          <div class="control"><label for="refresh">Repository refreshes <span>118 min</span></label><input id="refresh" type="number" min="0" value="10" data-minutes="118"></div>
+          <div class="control"><label for="rebuild">Repository rebuilds <span>235 min</span></label><input id="rebuild" type="number" min="0" value="1" data-minutes="235"></div>
+          <div class="control"><label for="teach">Retained teachings <span>6 min</span></label><input id="teach" type="number" min="0" value="5" data-minutes="6"></div>
+          <div class="control"><label for="factor">Credibility factor <span>0 to 1</span></label><input id="factor" type="number" min="0" max="1" step="0.05" value="0.70"></div>
+          <div class="control"><label for="rate">Loaded labor rate <span>USD/hour</span></label><input id="rate" type="number" min="0" step="5" value="40"></div>
+        </div>
+        <aside class="results" aria-live="polite">
+          <div class="result-label">Gross minutes avoided</div>
+          <div class="result-value" id="grossMinutes">5,330.5</div>
+          <div class="result-label">Credited effort saved</div>
+          <div class="result-value" id="savedHours">62.2 h</div>
+          <div class="result-label">Gross benefit estimate</div>
+          <div class="result-value" id="savedCost">$2,488</div>
+        </aside>
+      </div>
+      <div class="calc-note">This calculator estimates gross labor value only. It does not infer avoided defects, delivery acceleration, implementation cost, hosting cost, support effort, or annual benefit.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="section-no">05 | Financial integrity</div>
+      <div>
+        <h2>Benefit is not yet full ROI</h2>
+        <p class="lede">The application currently labels the $2,488 estimate as ROI. Financially, it is a gross productivity benefit. A defensible ROI percentage requires the cost side of the business case.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <b>Required formula</b>
+      <div>
+        <div class="roi-equation">ROI % = (Total quantified benefits - Total costs) / Total costs x 100</div>
+        <p style="margin-top:12px">Capture build effort, infrastructure, SAP connectivity, support, data stewardship, training, and change-management costs. Keep avoided-risk value separate unless it is supported by incident or rework evidence.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="section-no">06 | Validation plan</div>
+      <div>
+        <h2>Move from modeled value to proven value</h2>
+        <p class="lede">A short measurement cycle can replace assumed minutes with observed baselines and establish a finance-ready benefit case.</p>
+      </div>
+    </div>
+
+    <div class="roadmap">
+      <article class="roadmap-item"><small>Weeks 1-2</small><h3>Baseline</h3><p>Time a representative sample of manual searches, where-used investigations, exports, refreshes, and rebuilds. Record role and task complexity.</p></article>
+      <article class="roadmap-item"><small>Weeks 3-6</small><h3>Validate</h3><p>Compare tool-assisted completion time, successful outcomes, rework, and user confidence. Segment repeat actions to avoid double counting.</p></article>
+      <article class="roadmap-item"><small>Quarterly</small><h3>Govern</h3><p>Review rates and event weights, archive stale telemetry, track operating costs, and publish realized benefit with owner sign-off.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="section-no">07 | Assumptions</div>
+      <div>
+        <h2>Interpretation boundaries</h2>
+      </div>
+    </div>
+    <ul class="assumptions">
+      <li>Telemetry represents the latest available usage records, capped by the application at 50,000 events.</li>
+      <li>Each qualifying JSONL event counts once; an optional event quantity field is not used in ROI.</li>
+      <li>The 70% credibility factor discounts all modeled time equally and is not task-specific.</li>
+      <li>The $40 hourly rate is a configurable loaded rate, not a verified payroll or vendor rate.</li>
+      <li>Current usage is an early sample of two users over three active days and should not be extrapolated directly.</li>
+      <li>Repository refresh and rebuild savings are large contributors and should be validated first.</li>
+      <li>Teachings are valued from the current correction inventory, not historical teaching events.</li>
+      <li>Benefits from avoided defects, audit readiness, and faster onboarding are described but not monetized.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <div class="shell footer-inner">
+    <span>SAP Knowledge Copilot | Business Benefit &amp; ROI Assessment</span>
+    <span>Prepared from application telemetry and repository metrics | 28 July 2026</span>
+  </div>
+</footer>
+
+<script>
+  const activityInputs = Array.from(document.querySelectorAll('[data-minutes]'));
+  const factorInput = document.getElementById('factor');
+  const rateInput = document.getElementById('rate');
+
+  function numericValue(input) {
+    const value = Number(input.value);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
+  function updateCalculator() {
+    const grossMinutes = activityInputs.reduce((sum, input) =>
+      sum + numericValue(input) * Number(input.dataset.minutes), 0);
+    const factor = Math.min(1, numericValue(factorInput));
+    const creditedHours = Math.round((grossMinutes / 60 * factor) * 10) / 10;
+    const grossBenefit = Math.round(creditedHours * numericValue(rateInput));
+
+    document.getElementById('grossMinutes').textContent = grossMinutes.toLocaleString('en-US', { maximumFractionDigits: 1 });
+    document.getElementById('savedHours').textContent = creditedHours.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' h';
+    document.getElementById('savedCost').textContent = grossBenefit.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  }
+
+  [...activityInputs, factorInput, rateInput].forEach(input => input.addEventListener('input', updateCalculator));
+  updateCalculator();
+</script>
+</body>
+</html>

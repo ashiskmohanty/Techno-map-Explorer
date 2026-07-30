@@ -25,11 +25,13 @@ Excel exports. See sap_connect.py for the read logic.
 """
 from __future__ import annotations
 
+import io
 import json
 import os
 import re
+import zipfile
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 import build_data
 import sap_connect
@@ -37,7 +39,7 @@ import sap_http
 import llm
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-app = Flask(__name__, static_folder=HERE, static_url_path="")
+app = Flask(__name__, static_folder=None)
 
 
 @app.after_request
@@ -467,6 +469,22 @@ def sap_refresh():
 @app.route("/")
 def index():
     return send_from_directory(HERE, "index.html")
+
+
+@app.route("/<path:filename>")
+def public_asset(filename):
+    allowed = {
+        "app.js",
+        "data.js",
+        "data.json",
+        "architecture.html",
+        "business-benefit-roi.html",
+        "api-reference.html",
+        "deployment-roadmap.html",
+    }
+    if filename not in allowed:
+        return jsonify({"error": "not found"}), 404
+    return send_from_directory(HERE, filename)
 
 
 @app.route("/api/data")
@@ -1220,6 +1238,330 @@ REBUILD_LABELS = {
     "bw": "BW-IP objects + Process-area mapping",
     "bpml": "Process tiles / L1 process mapping",
 }
+REBUILD_TEMPLATE_SCHEMAS = {
+    "abap": {
+        "ABAP Objects": [
+            "ABAP Object name", "Process area",
+            "Development class / package", "Author",
+        ],
+    },
+    "bw": {
+        "BEx Queries": [
+            "Query", "Responsible", "Long description", "Process Area",
+            "Validity?", "Requried?", "Technical Details",
+            "Last Execution Date", "Comments",
+        ],
+        "Planning Sequences": [
+            "Planning Sequence", "Description", "Used by", "Process Area",
+        ],
+        "Planning Functions": [
+            "Planning Function", "Description", "Process Area", "Validity?",
+            "Requried?", "Technical details", "Last Used", "Comments",
+        ],
+        "Infoproviders": [
+            "InfoProvider", "Long description", "Process Area", "Validity?",
+            "Requried?", "Comments",
+        ],
+        "Aggregation Levels": [
+            "Aggregation Level", "Description", "Info provider",
+            "Planning sequence", "Process Area", "Valid/Delete", "Usage?",
+            "Comments",
+        ],
+        "Filters": [
+            "Filters", "Planning sequence", "Planning Function", "Level",
+            "Valid/Delete", "Usage?", "Comments",
+        ],
+        "Info Objects": [
+            "InfoObject", "Description", "Validity?", "Usage?",
+            "Technical Details", "Comments",
+        ],
+    },
+    "bpml": {
+        "BPML": [
+            "#", "L1 Process - E2E Business Process",
+            "L2 Process (PE specific)", "L3 Process",
+        ],
+    },
+}
+
+BACKUP_DIR = os.path.join(HERE, "backups")
+
+
+def _create_rebuild_template(slot):
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    schemas = REBUILD_TEMPLATE_SCHEMAS.get(slot)
+    if not schemas:
+        return None
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    for sheet_name, headers in schemas.items():
+        sheet = workbook.create_sheet(sheet_name)
+        header_row = 2 if slot == "bpml" else 1
+        if slot == "bpml":
+            sheet.cell(1, 1, "Business Process Master List")
+            sheet.merge_cells(start_row=1, start_column=1,
+                              end_row=1, end_column=len(headers))
+            title = sheet.cell(1, 1)
+            title.font = Font(bold=True, size=14, color="FFFFFF")
+            title.fill = PatternFill("solid", fgColor="173F5F")
+            title.alignment = Alignment(horizontal="center")
+            sheet.row_dimensions[1].height = 25
+        for column, header in enumerate(headers, 1):
+            cell = sheet.cell(header_row, column, header)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="087F76")
+            cell.alignment = Alignment(wrap_text=True, vertical="center")
+            sheet.column_dimensions[cell.column_letter].width = max(18, min(42, len(header) + 5))
+        sheet.freeze_panes = f"A{header_row + 1}"
+        sheet.auto_filter.ref = f"A{header_row}:{sheet.cell(header_row, len(headers)).coordinate}"
+        sheet.row_dimensions[header_row].height = 32
+    stream = io.BytesIO()
+    workbook.save(stream)
+    stream.seek(0)
+    return stream
+
+
+def _backup_items():
+    """Logical archive names mapped to the effective mutable data paths."""
+    return {
+        "data.json": os.path.join(HERE, "data.json"),
+        "data.js": os.path.join(HERE, "data.js"),
+        build_data.ABAP_FILE: os.path.join(HERE, build_data.ABAP_FILE),
+        build_data.BW_FILE: os.path.join(HERE, build_data.BW_FILE),
+        build_data.BPML_FILE: os.path.join(HERE, build_data.BPML_FILE),
+        "manual_objects.json": MANUAL_FILE,
+        "object_edits.json": EDITS_FILE,
+        "rspls_sequence.json": RSPLS_FILE,
+        "planfunc_class.json": PLANFUNC_CLASS_FILE,
+        "fox_formulas.json": FOX_FILE,
+        "corrections.json": CORR_FILE,
+        "feedback.json": FB_FILE,
+        "usage.jsonl": USAGE_FILE,
+        "audit_log.jsonl": AUDIT_FILE,
+        "sap_packages.json": PKGS_FILE,
+        "sap_live_objects.xlsx": LIVE_XLSX,
+    }
+
+
+def _new_backup_id():
+    import datetime as _dt
+    base = "backup_" + _dt.datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:22]
+    candidate = base
+    number = 2
+    while os.path.exists(os.path.join(BACKUP_DIR, candidate + ".zip")):
+        candidate = f"{base}_{number}"
+        number += 1
+    return candidate
+
+
+def _create_state_backup(reason="manual", by="admin"):
+    import datetime as _dt
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    backup_id = _new_backup_id()
+    archive = os.path.join(BACKUP_DIR, backup_id + ".zip")
+    temp_archive = archive + f".{os.getpid()}.tmp"
+    files = []
+    with _FileLock(os.path.join(BACKUP_DIR, "state")):
+        try:
+            with zipfile.ZipFile(temp_archive, "w", zipfile.ZIP_DEFLATED) as zf:
+                for logical_name, path in _backup_items().items():
+                    if not os.path.isfile(path):
+                        continue
+                    zf.write(path, arcname="state/" + logical_name)
+                    files.append({
+                        "name": logical_name,
+                        "bytes": os.path.getsize(path),
+                    })
+                manifest = {
+                    "version": 1,
+                    "id": backup_id,
+                    "created": _dt.datetime.now().isoformat(timespec="seconds"),
+                    "reason": reason,
+                    "by": by,
+                    "files": files,
+                }
+                zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+            os.replace(temp_archive, archive)
+        finally:
+            try:
+                if os.path.exists(temp_archive):
+                    os.remove(temp_archive)
+            except OSError:
+                pass
+    manifest["bytes"] = os.path.getsize(archive)
+    return manifest
+
+
+def _backup_path(backup_id):
+    if not re.fullmatch(r"backup_[A-Za-z0-9_]+", backup_id or ""):
+        return None
+    path = os.path.abspath(os.path.join(BACKUP_DIR, backup_id + ".zip"))
+    if os.path.dirname(path) != os.path.abspath(BACKUP_DIR):
+        return None
+    return path
+
+
+def _read_backup_manifest(path):
+    with zipfile.ZipFile(path, "r") as zf:
+        return json.loads(zf.read("manifest.json").decode("utf-8"))
+
+
+def _list_state_backups():
+    if not os.path.isdir(BACKUP_DIR):
+        return []
+    backups = []
+    for name in os.listdir(BACKUP_DIR):
+        if not name.endswith(".zip"):
+            continue
+        path = os.path.join(BACKUP_DIR, name)
+        try:
+            item = _read_backup_manifest(path)
+            item["bytes"] = os.path.getsize(path)
+            backups.append(item)
+        except Exception:
+            continue
+    return sorted(backups, key=lambda item: item.get("created", ""), reverse=True)
+
+
+def _validate_backup_member(logical_name, content):
+    ext = os.path.splitext(logical_name)[1].lower()
+    if ext == ".json":
+        json.loads(content.decode("utf-8"))
+    elif ext == ".jsonl":
+        for line in content.decode("utf-8").splitlines():
+            if line.strip():
+                json.loads(line)
+
+
+def _restore_state_backup(path):
+    items = _backup_items()
+    staged = {}
+    with zipfile.ZipFile(path, "r") as zf:
+        bad_member = zf.testzip()
+        if bad_member:
+            raise ValueError(f"Backup is corrupt at {bad_member}.")
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+        if manifest.get("version") != 1:
+            raise ValueError("Unsupported backup version.")
+        expected = {"state/" + name for name in items}
+        members = {name for name in zf.namelist() if name != "manifest.json"}
+        unexpected = members - expected
+        if unexpected:
+            raise ValueError("Backup contains unexpected files.")
+        for member in members:
+            logical_name = member.removeprefix("state/")
+            content = zf.read(member)
+            _validate_backup_member(logical_name, content)
+            staged[logical_name] = content
+
+    temp_paths = {}
+    with _FileLock(os.path.join(BACKUP_DIR, "state")):
+        try:
+            for logical_name, content in staged.items():
+                target = items[logical_name]
+                os.makedirs(os.path.dirname(target) or ".", exist_ok=True)
+                temp = target + f".{os.getpid()}.restore.tmp"
+                with open(temp, "wb") as fh:
+                    fh.write(content)
+                temp_paths[logical_name] = temp
+            for logical_name, temp in temp_paths.items():
+                os.replace(temp, items[logical_name])
+            for logical_name, target in items.items():
+                if logical_name not in staged and os.path.isfile(target):
+                    os.remove(target)
+        finally:
+            for temp in temp_paths.values():
+                try:
+                    if os.path.exists(temp):
+                        os.remove(temp)
+                except OSError:
+                    pass
+    return manifest
+
+
+@app.route("/api/backups")
+def api_backups_list():
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    return jsonify({"ok": True, "backups": _list_state_backups()})
+
+
+@app.route("/api/backups", methods=["POST"])
+def api_backups_create():
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    payload = request.get_json(silent=True) or {}
+    by = (payload.get("by") or request.headers.get("X-Admin-User") or "admin").strip()
+    reason = (payload.get("reason") or "manual").strip()[:120]
+    try:
+        backup = _create_state_backup(reason=reason, by=by)
+    except Exception as exc:
+        app.logger.exception("backup failed")
+        return jsonify({"ok": False, "error": f"Backup failed: {exc}"}), 500
+    _audit("backup", by=by, backup=backup["id"], reason=reason,
+           files=len(backup.get("files", [])))
+    _track("backup", user=by)
+    return jsonify({"ok": True, "backup": backup})
+
+
+@app.route("/api/backups/<backup_id>/download")
+def api_backups_download(backup_id):
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    path = _backup_path(backup_id)
+    if not path or not os.path.isfile(path):
+        return jsonify({"ok": False, "error": "Backup not found."}), 404
+    return send_from_directory(BACKUP_DIR, os.path.basename(path), as_attachment=True)
+
+
+@app.route("/api/backups/<backup_id>", methods=["DELETE"])
+def api_backups_delete(backup_id):
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    path = _backup_path(backup_id)
+    if not path or not os.path.isfile(path):
+        return jsonify({"ok": False, "error": "Backup not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    by = (payload.get("by") or request.headers.get("X-Admin-User") or "admin").strip()
+    try:
+        with _FileLock(os.path.join(BACKUP_DIR, "state")):
+            if not os.path.isfile(path):
+                return jsonify({"ok": False, "error": "Backup not found."}), 404
+            os.remove(path)
+    except Exception as exc:
+        app.logger.exception("backup deletion failed")
+        return jsonify({"ok": False, "error": f"Delete failed: {exc}"}), 500
+    _audit("backup_delete", by=by, backup=backup_id)
+    _track("backup_delete", user=by, backup=backup_id)
+    return jsonify({"ok": True, "deleted": backup_id})
+
+
+@app.route("/api/backups/<backup_id>/restore", methods=["POST"])
+def api_backups_restore(backup_id):
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    path = _backup_path(backup_id)
+    if not path or not os.path.isfile(path):
+        return jsonify({"ok": False, "error": "Backup not found."}), 404
+    payload = request.get_json(silent=True) or {}
+    by = (payload.get("by") or request.headers.get("X-Admin-User") or "admin").strip()
+    try:
+        safety = _create_state_backup(reason=f"before restore {backup_id}", by=by)
+        restored = _restore_state_backup(path)
+        data = load_or_build()
+    except Exception as exc:
+        app.logger.exception("restore failed")
+        return jsonify({"ok": False, "error": f"Restore failed: {exc}"}), 500
+    _audit("restore", by=by, backup=backup_id, safety_backup=safety["id"])
+    _track("restore", user=by, backup=backup_id)
+    return jsonify({
+        "ok": True,
+        "restored": restored,
+        "safety_backup": safety,
+        "data": data,
+    })
 
 
 @app.route("/api/rebuild/status")
@@ -1244,6 +1586,24 @@ def api_rebuild_status():
     return jsonify({"ok": True, "files": files, "packages": list(build_data.PACKAGES)})
 
 
+@app.route("/api/rebuild/template/<slot>")
+def api_rebuild_template(slot):
+    if not _is_admin(request):
+        return jsonify({"ok": False, "error": "Admin key required."}), 403
+    stream = _create_rebuild_template(slot)
+    if stream is None:
+        return jsonify({"ok": False, "error": "Template not found."}), 404
+    by = (request.headers.get("X-Admin-User") or "admin").strip()
+    _audit("rebuild_template_download", by=by, slot=slot)
+    _track("rebuild_template_download", user=by, slot=slot)
+    return send_file(
+        stream,
+        as_attachment=True,
+        download_name=f"{slot.upper()}_Rebuild_Template.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
 @app.route("/api/rebuild", methods=["POST"])
 def api_rebuild():
     """Admin-only: save uploaded workbook(s), then rebuild data.json/data.js,
@@ -1252,7 +1612,7 @@ def api_rebuild():
         return jsonify({"ok": False, "error": "Admin key required."}), 403
     import re as _re, shutil as _sh, time as _t
 
-    saved = {}
+    uploads = []
     for slot, fname in REBUILD_SLOTS.items():
         f = request.files.get(slot)
         if not f or not f.filename:
@@ -1261,24 +1621,31 @@ def api_rebuild():
         if ext not in (".xlsx", ".xls"):
             return jsonify({"ok": False,
                             "error": f"{slot}: only .xlsx / .xls files are allowed."}), 400
-        dest = os.path.join(HERE, fname)          # canonical name (no traversal)
-        if os.path.exists(dest):
-            try:
-                _sh.copy2(dest, dest + ".bak")
-            except Exception:
-                pass
-        f.save(dest)
-        saved[slot] = {"saved_as": fname, "uploaded": f.filename,
-                       "bytes": os.path.getsize(dest)}
+        uploads.append((slot, fname, f))
 
     packages = None
     pk = (request.form.get("packages") or "").strip()
     if pk:
         packages = [p.strip() for p in _re.split(r"[,\s]+", pk) if p.strip()]
 
-    if not saved and not packages:
+    if not uploads and not packages:
         return jsonify({"ok": False,
                         "error": "Upload at least one Excel file, or provide packages."}), 400
+
+    by = (request.form.get("by") or request.headers.get("X-Admin-User") or "admin")
+    try:
+        backup = _create_state_backup(reason="automatic before rebuild", by=by)
+    except Exception as e:
+        app.logger.exception("pre-rebuild backup failed")
+        return jsonify({"ok": False,
+                        "error": f"Rebuild stopped because backup failed: {e}"}), 500
+
+    saved = {}
+    for slot, fname, f in uploads:
+        dest = os.path.join(HERE, fname)          # canonical name (no traversal)
+        f.save(dest)
+        saved[slot] = {"saved_as": fname, "uploaded": f.filename,
+                       "bytes": os.path.getsize(dest)}
 
     dj = os.path.join(HERE, "data.json")
     if os.path.exists(dj):
@@ -1295,14 +1662,15 @@ def api_rebuild():
                         "error": f"Rebuild failed: {type(e).__name__}: {e}"}), 500
 
     data = load_or_build()                        # overlays manual + admin edits
-    by = (request.form.get("by") or request.headers.get("X-Admin-User") or "admin")
     _audit("rebuild", by=by,
            files={k: v["uploaded"] for k, v in saved.items()},
-           packages=packages, objects=len(data.get("objects", [])))
+            packages=packages, objects=len(data.get("objects", [])),
+            backup=backup["id"])
     _track("rebuild", user=by)
     return jsonify({
         "ok": True,
         "saved": saved,
+        "backup": backup,
         "summary": {
             "objects": len(data.get("objects", [])),
             "processAreas": len(data.get("processAreas", [])),

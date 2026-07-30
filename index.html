@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PS Process Explorer &middot; SAP MS1/122</title>
+<title>SAP Knowledge Copilot &middot; SAP MS1/122</title>
 
 <!-- Charts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -502,6 +502,8 @@ tbody tr:hover{background:var(--panel2)}
 .rb-pick:hover{border-color:var(--accent);background:var(--panel)}
 .rb-chosen{font-size:11.5px;color:var(--ok);flex:0 0 auto;max-width:200px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:700px){.rb-slot{flex-wrap:wrap}.rb-slot .rb-meta{flex-basis:calc(100% - 40px)}
+  .rb-chosen{width:100%;max-width:none}.rb-pick{flex:1;text-align:center}}
 .afoot input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit}
 .afoot input:focus{outline:none;border-color:var(--accent)}
@@ -514,6 +516,14 @@ tbody tr:hover{background:var(--panel2)}
   border-radius:8px;background:var(--panel)}
 .adm-list .li .lv{margin-left:auto;font-weight:700;color:var(--accent)}
 .adm-list .li .lk{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.backup-list{display:flex;flex-direction:column;gap:9px}
+.backup-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:11px}
+.backup-meta{flex:1;min-width:0}
+.backup-title{font-size:13px;font-weight:700;color:var(--text)}
+.backup-detail{margin-top:3px;color:var(--muted);font-size:11.5px;overflow-wrap:anywhere}
+.backup-actions{display:flex;gap:7px;flex:0 0 auto}
+@media(max-width:700px){.backup-row{align-items:flex-start;flex-direction:column}.backup-actions{width:100%}.backup-actions .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -521,8 +531,8 @@ tbody tr:hover{background:var(--panel2)}
 <header>
   <div class="logo">PS</div>
   <div class="brand">
-    <h1>PS Process Explorer</h1>
-    <p>Professional Services &middot; Custom Object Intelligence</p>
+    <h1>SAP Knowledge Copilot</h1>
+    <p>(AI-powered knowledge explorer for SAP)</p>
   </div>
   <div class="env-pill" id="envPill" title="Configure SAP MS1 connection" style="cursor:pointer">
     <span class="dot offline" id="connDot"></span><span id="envText">SAP MS1 / 122</span>
@@ -537,6 +547,7 @@ tbody tr:hover{background:var(--panel2)}
   <div class="tab" data-view="custom">📦 Custom Objects <span class="badge" id="bCustom">0</span></div>
   <div class="tab" data-view="admin" id="tabAdmin" style="display:none">🔐 Admin</div>
   <div class="tab" data-view="rebuild" id="tabRebuild" style="display:none">🛠️ Rebuild</div>
+  <div class="tab" data-view="backup" id="tabBackup" style="display:none">💾 Backup</div>
 </nav>
 
 <main>
@@ -711,6 +722,34 @@ tbody tr:hover{background:var(--panel2)}
     <div class="panel" style="max-width:920px;margin-top:14px">
       <h3>Result</h3>
       <div class="adm-list" id="rbResult"><span class="muted">No rebuild run yet in this session.</span></div>
+    </div>
+  </section>
+
+  <!-- ===================== BACKUP ===================== -->
+  <section class="view" id="view-backup">
+    <div class="toolbar">
+      <span class="aud-title">💾 Full data backups</span>
+      <button class="btn" id="backupRefresh" style="margin-left:auto">↻ Refresh</button>
+    </div>
+    <div class="panel" style="max-width:920px">
+      <p class="muted" style="margin:0 0 14px;font-size:12.5px">
+        Create a timestamped ZIP snapshot of the generated repository, rebuild workbooks,
+        process mappings, object edits, teachings, feedback and operational logs. SAP credentials
+        and the admin key are deliberately excluded. A snapshot is also created automatically
+        before every rebuild and before every restore.
+      </p>
+      <div class="field" style="max-width:600px">
+        <label>Backup note <span class="muted">(optional)</span></label>
+        <input id="backupReason" placeholder="Before refined process mapping" maxlength="120" autocomplete="off"/>
+      </div>
+      <div class="conn-status" id="backupStatus" style="margin-top:14px"></div>
+      <div class="modal-foot" style="padding:16px 0 0;border:none">
+        <button class="btn green" id="backupCreate" style="margin-left:auto">＋ Create backup</button>
+      </div>
+    </div>
+    <div class="panel" style="max-width:920px;margin-top:14px">
+      <h3>Available snapshots</h3>
+      <div id="backupList" class="backup-list"><span class="muted">Loading backups…</span></div>
     </div>
   </section>
 </main>

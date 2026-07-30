@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PS Process Explorer &middot; High-Level Architecture</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --ink:#e2e8f0; --muted:#94a3b8;
+    --line:#334155; --accent:#38bdf8;
+    --c-client:#0ea5e9; --c-server:#22c55e; --c-store:#f59e0b;
+    --c-sap:#a855f7; --c-ext:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:32px 24px 56px;
+    font-family:"Segoe UI",system-ui,Roboto,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#16233f,#0f172a);
+    color:var(--ink);
+  }
+  h1{font-size:26px;margin:0 0 4px;text-align:center;letter-spacing:.3px}
+  .sub{text-align:center;color:var(--muted);margin:0 0 28px;font-size:14px}
+  .diagram{max-width:1180px;margin:0 auto}
+
+  .layer{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 18px 18px;
+    margin:0 auto;
+    box-shadow:0 8px 24px rgba(0,0,0,.28);
+  }
+  .layer-title{
+    display:flex;align-items:center;gap:10px;
+    font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+    color:var(--muted);margin:0 0 14px;
+  }
+  .layer-title .dot{width:10px;height:10px;border-radius:50%}
+  .row{display:flex;flex-wrap:wrap;gap:12px}
+  .row.cols-even > .card{flex:1 1 0;min-width:150px}
+
+  .card{
+    background:#0f1b31;
+    border:1px solid var(--line);
+    border-top:3px solid var(--accent);
+    border-radius:10px;
+    padding:12px 14px;
+    min-width:160px;
+    transition:transform .15s ease,box-shadow .15s ease;
+  }
+  .card:hover{transform:translateY(-3px);box-shadow:0 10px 20px rgba(0,0,0,.35)}
+  .card h3{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:7px}
+  .card p{margin:0;font-size:12px;color:var(--muted);line-height:1.5}
+  .card code{color:var(--accent);font-size:11.5px}
+  .tag{
+    display:inline-block;margin:6px 4px 0 0;padding:2px 8px;
+    font-size:10.5px;border-radius:999px;background:#1e2c48;color:#cbd5e1;
+    border:1px solid var(--line);
+  }
+
+  .b-client .card{border-top-color:var(--c-client)}
+  .b-server .card{border-top-color:var(--c-server)}
+  .b-store  .card{border-top-color:var(--c-store)}
+  .b-sap    .card{border-top-color:var(--c-sap)}
+  .b-ext    .card{border-top-color:var(--c-ext)}
+
+  .b-client .dot{background:var(--c-client)}
+  .b-server .dot{background:var(--c-server)}
+  .b-store  .dot{background:var(--c-store)}
+  .b-sap    .dot{background:var(--c-sap)}
+  .b-ext    .dot{background:var(--c-ext)}
+
+  .connector{display:flex;flex-direction:column;align-items:center;color:var(--muted)}
+  .connector .arrow{width:2px;height:26px;background:linear-gradient(var(--line),var(--accent))}
+  .connector .label{
+    font-size:11px;margin:6px 0;padding:3px 12px;border:1px dashed var(--line);
+    border-radius:999px;background:#0f1b31;color:#cbd5e1;
+  }
+  .connector .arrow.down::after{
+    content:"▼";position:relative;top:16px;color:var(--accent);font-size:11px;
+  }
+
+  .split{display:flex;gap:16px;flex-wrap:wrap}
+  .split > .layer{flex:1 1 340px}
+
+  .legend{
+    max-width:1180px;margin:26px auto 0;display:flex;gap:16px;flex-wrap:wrap;
+    justify-content:center;font-size:12px;color:var(--muted)
+  }
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  footer{max-width:1180px;margin:22px auto 0;color:var(--muted);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+  <h1>PS Process Explorer — High-Level Architecture</h1>
+  <p class="sub">Interactive SAP MS1/122 techno-map dashboard · Flask backend · local JSON store · read-only ADT/RFC access</p>
+
+  <div class="diagram">
+
+    <!-- ============ CLIENT ============ -->
+    <div class="layer b-client">
+      <div class="layer-title"><span class="dot"></span>Presentation Layer · Browser (index.html + app.js)</div>
+      <div class="row cols-even">
+        <div class="card">
+          <h3>🧩 PS Process</h3>
+          <p>Process tiles (BPML L2/L3). Drill into linked ABAP &amp; BW objects per process area.</p>
+        </div>
+        <div class="card">
+          <h3>🕸️ Dependency Map</h3>
+          <p>Interactive object graph &amp; process-flow map with drill-down.</p>
+        </div>
+        <div class="card">
+          <h3>🌳 Technical Objects</h3>
+          <p>Hierarchy tree: FM → Class → Method · PlanSeq → PlanFunc → Class/FOX.</p>
+        </div>
+        <div class="card">
+          <h3>📦 Custom Objects</h3>
+          <p>Filterable/exportable list of all Z*/Y* objects. Wildcard search + Excel export + Refresh.</p>
+        </div>
+        <div class="card">
+          <h3>🔐 Admin / 🛠️ Rebuild</h3>
+          <p>Usage metrics, audit, teachings &amp; repository rebuild controls.</p>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div class="card" style="flex:1">
+          <h3>🤖 Object Finder Assistant</h3>
+          <p>Chat-driven finder — dependency maps, FOX display, where-used. Local intent rules with optional LLM routing.</p>
+        </div>
+        <div class="card" style="flex:1">
+          <h3>📊 Client Libraries (CDN)</h3>
+          <p>Rendering &amp; visualization loaded in the browser.</p>
+          <span class="tag">Chart.js</span><span class="tag">Cytoscape + dagre</span><span class="tag">Mermaid</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">
+      <div class="arrow"></div>
+      <div class="label">HTTP / JSON · fetch() → REST API</div>
+      <div class="arrow down"></div>
+    </div>
+
+    <!-- ============ SERVER ============ -->
+    <div class="layer b-server">
+      <div class="layer-title"><span class="dot"></span>Application Layer · Python / Flask (app.py)</div>
+      <div class="row cols-even">
+        <div class="card">
+          <h3>🌐 Flask REST API</h3>
+          <p>36 endpoints. Static host + no-cache. Merges &amp; overlays repository data at load.</p>
+          <span class="tag">/api/data</span><span class="tag">/api/refresh</span><span class="tag">/api/sap/*</span>
+        </div>
+        <div class="card">
+          <h3>🧱 build_data.py</h3>
+          <p>Builds <code>data.json</code> from Excel exports (BPML, ABAP FM, BW) when missing.</p>
+        </div>
+        <div class="card">
+          <h3>🔗 Overlay / Merge logic</h3>
+          <p>Merges RSPLS steps, planfunc→class, FOX flags, manual objects &amp; corrections.</p>
+        </div>
+      </div>
+      <div class="row cols-even" style="margin-top:12px">
+        <div class="card">
+          <h3>📡 sap_http.py</h3>
+          <p>Read-only ADT REST over <code>urllib</code> (no SDK): search, source, where-used. Freestyle data-preview disabled (dump-safe).</p>
+        </div>
+        <div class="card">
+          <h3>🔌 sap_connect.py</h3>
+          <p>Optional live RFC read via <code>pyrfc</code> (unavailable here → falls back to Excel/ADT).</p>
+        </div>
+        <div class="card">
+          <h3>🧠 llm.py</h3>
+          <p>Optional intent router. Classifies only; matching stays local so names can't be invented.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="split" style="margin-top:22px">
+
+      <!-- ============ LOCAL STORE ============ -->
+      <div class="layer b-store">
+        <div class="layer-title"><span class="dot"></span>Local Data Store · JSON / JSONL</div>
+        <div class="row">
+          <div class="card" style="flex:1 1 100%">
+            <h3>🗂️ Repository &amp; overlays</h3>
+            <span class="tag">data.json</span><span class="tag">rspls_sequence.json</span>
+            <span class="tag">planfunc_class.json</span><span class="tag">fox_formulas.json</span>
+            <span class="tag">manual_objects.json</span><span class="tag">corrections.json</span>
+            <span class="tag">admin_config.json</span>
+          </div>
+          <div class="card" style="flex:1 1 100%">
+            <h3>📈 Telemetry &amp; learning</h3>
+            <span class="tag">usage.jsonl</span><span class="tag">audit_log.jsonl</span>
+            <span class="tag">feedback.json</span>
+          </div>
+          <div class="card" style="flex:1 1 100%">
+            <h3>📄 Source exports</h3>
+            <p>Excel snapshots (BPML, ABAP FM, BW plan seq &amp; BEx) under <code>/exports</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SAP / EXTERNAL ============ -->
+      <div class="layer b-sap">
+        <div class="layer-title"><span class="dot"></span>SAP MS1 / 122 · Read-only</div>
+        <div class="row">
+          <div class="card" style="flex:1 1 100%">
+            <h3>🟪 ABAP packages</h3>
+            <span class="tag">ZPS_PROJ_EXEC</span><span class="tag">Z_PROF_SERVICES</span><span class="tag">ZCPM</span>
+            <p style="margin-top:6px">Function Modules · Classes · Methods.</p>
+          </div>
+          <div class="card" style="flex:1 1 100%">
+            <h3>🟦 BW-IP objects &amp; tables</h3>
+            <span class="tag">RSPLS_SEQUENCE_S</span><span class="tag">RSPLF_SRV</span><span class="tag">RSPLF_SRVTYPE</span>
+            <p style="margin-top:6px">Planning Seq/Func/Filter · BEx Queries · FOX formulas.</p>
+          </div>
+          <div class="card" style="flex:1 1 100%">
+            <h3>🔒 ADT REST services</h3>
+            <p>quickSearch · read source · usageReferences (POST=read, dump-free). No writes ever.</p>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div class="card b-ext" style="flex:1;border-top-color:var(--c-ext)">
+            <h3>☁️ Optional LLM</h3>
+            <p>Azure OpenAI / OpenAI — intent classification only (env-configured, offline-safe).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <span><i style="background:var(--c-client)"></i>Presentation (browser)</span>
+    <span><i style="background:var(--c-server)"></i>Application (Flask)</span>
+    <span><i style="background:var(--c-store)"></i>Local store (JSON)</span>
+    <span><i style="background:var(--c-sap)"></i>SAP MS1/122 (read-only)</span>
+    <span><i style="background:var(--c-ext)"></i>External / optional</span>
+  </div>
+
+  <footer>
+    Data flow: Browser ⇄ Flask REST API ⇄ local JSON store (overlays &amp; telemetry) &amp; read-only SAP ADT/RFC.
+    Live SAP access is strictly read-only; runtime is dump-free (freestyle data-preview disabled).
+  </footer>
+</body>
+</html>

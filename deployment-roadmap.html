@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Azure SaaS deployment and scaling roadmap for SAP Knowledge Copilot">
+  <title>SAP Knowledge Copilot | Deployment Roadmap</title>
+  <style>
+    :root{
+      --ink:#17212b;--muted:#5d6974;--paper:#f7f8f5;--white:#fff;
+      --teal:#087f76;--teal-soft:#dff3ef;--coral:#d75b45;--coral-soft:#fbe9e4;
+      --gold:#a66b05;--gold-soft:#fff1cf;--blue:#1769aa;--blue-soft:#e5f1fa;
+      --line:#d9dedc;--shadow:0 12px 28px rgba(24,40,46,.09);--radius:8px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:Bahnschrift,"Aptos",sans-serif;line-height:1.55;letter-spacing:0}
+    button{font:inherit;letter-spacing:0}
+    .hero{position:relative;overflow:hidden;background:#123b3a;color:#fff;padding:42px 24px 36px;border-bottom:5px solid var(--coral)}
+    .hero::before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(8,127,118,.82),rgba(18,59,58,.9) 54%,rgba(215,91,69,.46)),repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.04) 80px)}
+    .hero-inner{position:relative;max-width:1180px;margin:auto}
+    .eyebrow{text-transform:uppercase;font-size:.76rem;font-weight:700;color:#bce8df}
+    h1{font-family:Cambria,Georgia,serif;font-size:clamp(2.15rem,5vw,4.8rem);line-height:.98;margin:10px 0 14px;max-width:860px;font-weight:700;letter-spacing:0}
+    .hero p{max-width:780px;margin:0;color:#e7f3f1;font-size:1.08rem}
+    .facts{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+    .fact{border:1px solid rgba(255,255,255,.28);padding:8px 12px;background:rgba(0,0,0,.12);font-size:.84rem}
+    .tabs-wrap{position:sticky;top:0;z-index:20;background:rgba(247,248,245,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+    .tabs{max-width:1180px;margin:auto;display:flex;overflow:auto;padding:0 18px;scrollbar-width:thin}
+    .tab{appearance:none;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--muted);font-weight:700;padding:16px 17px;white-space:nowrap;cursor:pointer}
+    .tab:hover{color:var(--ink)}
+    .tab[aria-selected="true"]{color:var(--teal);border-bottom-color:var(--teal)}
+    main{max-width:1180px;margin:auto}
+    .panel{display:none;padding:38px 24px 70px}
+    .panel.active{display:block;animation:reveal .32s ease both}
+    @keyframes reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    h2{font-family:Cambria,Georgia,serif;font-size:clamp(1.65rem,3vw,2.6rem);line-height:1.12;margin:0 0 8px;letter-spacing:0}
+    h3{font-size:1.06rem;margin:0 0 8px;letter-spacing:0}
+    .lede{color:var(--muted);max-width:850px;margin:0 0 30px}
+    .band{margin:28px -24px;padding:28px 24px;background:var(--white);border-block:1px solid var(--line)}
+    .band-inner{max-width:1132px;margin:auto}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    .grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .card{background:var(--white);border:1px solid var(--line);border-top:4px solid var(--teal);padding:18px;border-radius:var(--radius);box-shadow:0 4px 12px rgba(24,40,46,.04)}
+    .card.coral{border-top-color:var(--coral)}.card.gold{border-top-color:var(--gold)}.card.blue{border-top-color:var(--blue)}
+    .card p,.card li{color:var(--muted);font-size:.93rem}.card p:last-child{margin-bottom:0}
+    .metric{font-family:Cambria,Georgia,serif;font-size:2rem;line-height:1;color:var(--teal);margin-bottom:7px}
+    .callout{display:grid;grid-template-columns:auto 1fr;gap:14px;margin:24px 0;padding:18px 20px;border-left:5px solid var(--gold);background:var(--gold-soft)}
+    .callout strong{color:#754d06}.callout p{margin:3px 0 0;color:#5f543f}
+    .decision{border-left-color:var(--teal);background:var(--teal-soft)}.decision strong{color:#075e57}.decision p{color:#345d59}
+    .warning{border-left-color:var(--coral);background:var(--coral-soft)}.warning strong{color:#983d2d}.warning p{color:#704943}
+    table{width:100%;border-collapse:collapse;background:var(--white);font-size:.91rem}
+    th,td{text-align:left;vertical-align:top;padding:13px 12px;border-bottom:1px solid var(--line)}
+    th{background:#eef1ee;color:#34414a;font-size:.76rem;text-transform:uppercase}
+    tbody tr:hover{background:#fafcfb}
+    code{font-family:"Cascadia Mono",Consolas,monospace;background:#e9edeb;padding:2px 5px;border-radius:3px;font-size:.86em}
+    .diagram{overflow:auto;background:var(--white);border:1px solid var(--line);padding:20px;margin:22px 0;border-radius:var(--radius);box-shadow:var(--shadow)}
+    .mermaid{min-width:720px;text-align:center}
+    .steps{counter-reset:roadmap;display:grid;gap:14px}
+    .step{counter-increment:roadmap;display:grid;grid-template-columns:58px 1fr;gap:15px;padding:18px 0;border-bottom:1px solid var(--line)}
+    .step::before{content:counter(roadmap,decimal-leading-zero);display:grid;place-items:center;align-self:start;width:50px;height:50px;background:var(--ink);color:#fff;font-weight:800;border-radius:50%}
+    .step p{margin:4px 0;color:var(--muted)}
+    .phase{display:grid;grid-template-columns:150px 1fr 180px;gap:18px;padding:20px 0;border-bottom:1px solid var(--line);align-items:start}
+    .phase-label{font-weight:800;color:var(--teal)}.phase-time{color:var(--muted);font-size:.88rem}
+    .phase ul{margin:7px 0 0;padding-left:19px;color:var(--muted)}
+    .pill{display:inline-block;padding:4px 8px;margin:2px 4px 2px 0;background:var(--blue-soft);color:#145486;font-size:.76rem;font-weight:700;border-radius:3px}
+    .checklist{list-style:none;padding:0;margin:0;columns:2;column-gap:30px}.checklist li{break-inside:avoid;padding:7px 0 7px 27px;position:relative}.checklist li::before{content:"✓";position:absolute;left:0;color:var(--teal);font-weight:900}
+    .scale-row{display:grid;grid-template-columns:130px 1fr 1fr;gap:18px;padding:18px 0;border-bottom:1px solid var(--line)}
+    .scale-row strong{color:var(--teal)}
+    footer{background:var(--ink);color:#dce4e5;padding:24px;text-align:center;font-size:.84rem}
+    @media(max-width:820px){.grid,.grid.two{grid-template-columns:1fr}.phase,.scale-row{grid-template-columns:1fr}.phase-time{margin-top:-10px}.checklist{columns:1}.hero{padding-top:32px}.panel{padding-inline:18px}.band{margin-inline:-18px;padding-inline:18px}table{display:block;max-width:100%;overflow-x:auto}.mermaid{min-width:620px}}
+    @media print{.tabs-wrap{display:none}.panel{display:block!important;page-break-before:always;animation:none}.panel:first-child{page-break-before:auto}.hero{background:#123b3a!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.card{break-inside:avoid}.diagram{box-shadow:none}main{max-width:none}}
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="eyebrow">SAP Knowledge Copilot · Azure SaaS transformation</div>
+      <h1>Deployment Roadmap</h1>
+      <p>A pragmatic path from a single-instance, file-backed application to a secure, reusable and horizontally scalable SaaS platform for teams that upload the same supported Excel inputs.</p>
+      <div class="facts">
+        <span class="fact">Target: multi-tenant SaaS</span><span class="fact">Runtime: Azure Container Apps</span><span class="fact">Data: PostgreSQL + Blob Storage</span><span class="fact">Jobs: Service Bus + workers</span><span class="fact">Delivery: IaC + CI/CD</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs-wrap">
+    <nav class="tabs" role="tablist" aria-label="Roadmap sections">
+      <button class="tab" role="tab" aria-selected="true" aria-controls="summary">1. Strategy</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="architecture">2. Architecture</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="data">3. Data migration</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tenancy">4. Multi-tenancy</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="scale">5. Scale & operations</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="delivery">6. Delivery plan</button>
+    </nav>
+  </div>
+
+  <main>
+    <section class="panel active" id="summary" role="tabpanel">
+      <h2>Move state first, scale second</h2>
+      <p class="lede">The code already runs in a container, but the application directory is also its database, document store, audit log and backup system. Multiple replicas cannot safely share that model. The first architectural goal is therefore a stateless web container with every mutable item stored in a tenant-aware Azure service.</p>
+
+      <div class="grid">
+        <article class="card"><div class="metric">1</div><h3>Reusable application</h3><p>One product deployment serves many teams. Tenant context determines data, configuration, limits and SAP connection settings.</p></article>
+        <article class="card coral"><div class="metric">2</div><h3>Two storage classes</h3><p>Blob Storage holds large files; PostgreSQL holds searchable, relational and transactional application records.</p></article>
+        <article class="card gold"><div class="metric">3</div><h3>Asynchronous rebuilds</h3><p>Excel processing leaves the HTTP request path and runs as a durable queued job with progress, retries and audit history.</p></article>
+      </div>
+
+      <div class="callout decision"><div>◆</div><div><strong>Recommended product boundary</strong><p>Launch the SaaS first around customer-supplied Excel files. Treat direct SAP RFC/ADT connectivity as a later enterprise connector because customer SAP systems normally sit behind private networks and require tenant-specific credentials, firewall rules and SDK licensing.</p></div></div>
+
+      <div class="band"><div class="band-inner">
+        <h3>Recommended Azure service map</h3>
+        <table>
+          <thead><tr><th>Capability</th><th>Recommended service</th><th>Why</th><th>Initial posture</th></tr></thead>
+          <tbody>
+            <tr><td>Global entry and protection</td><td>Azure Front Door Premium + WAF</td><td>TLS, custom domains, edge protection and future regional routing.</td><td>Optional for pilot; required before public enterprise launch.</td></tr>
+            <tr><td>Web/API runtime</td><td>Azure Container Apps</td><td>Runs the existing Flask container, supports revisions, managed identity and HTTP autoscaling.</td><td>One app, minimum 1 replica; move to 2 for production availability.</td></tr>
+            <tr><td>Background processing</td><td>Container Apps Jobs or worker app</td><td>Isolates memory/CPU-heavy Excel rebuilds from interactive traffic.</td><td>Scale from Service Bus queue depth.</td></tr>
+            <tr><td>Structured data</td><td>Azure Database for PostgreSQL Flexible Server</td><td>Transactions, tenant filtering, indexing, reporting and point-in-time restore.</td><td>Zone-redundant HA when production RTO requires it.</td></tr>
+            <tr><td>Files and snapshots</td><td>Azure Blob Storage</td><td>Excel uploads, generated exports and backup ZIPs with versioning and lifecycle policies.</td><td>Private access, soft delete, versioning, managed identity.</td></tr>
+            <tr><td>Job transport</td><td>Azure Service Bus</td><td>Durable commands, retries, dead-lettering and workload decoupling.</td><td>One rebuild queue; partition by tenant only when needed.</td></tr>
+            <tr><td>Secrets</td><td>Azure Key Vault</td><td>Protects SAP and model credentials; removes secrets from files and images.</td><td>Managed identity access; no secrets in environment files.</td></tr>
+            <tr><td>Identity</td><td>Microsoft Entra ID / External ID</td><td>SSO, MFA, tenant membership and app roles.</td><td>Admin, Contributor and Reader roles.</td></tr>
+            <tr><td>Telemetry</td><td>Application Insights + Log Analytics</td><td>Requests, traces, dependency timing, failures and tenant-safe operational metrics.</td><td>Structured logs with correlation IDs; never log secrets or uploaded content.</td></tr>
+            <tr><td>AI retrieval, later</td><td>Azure AI Search + Azure OpenAI</td><td>Semantic retrieval over large object catalogues and governed model access.</td><td>Add only after deterministic search and tenant isolation are stable.</td></tr>
+          </tbody>
+        </table>
+      </div></div>
+
+      <h3>Non-negotiable launch gates</h3>
+      <ul class="checklist">
+        <li>Every request resolves an authenticated tenant and user</li>
+        <li>No mutable data is written inside the container</li>
+        <li>Uploads are validated, size-limited and malware-scanned</li>
+        <li>Database and blob queries are tenant-scoped by design</li>
+        <li>Rebuild jobs are idempotent and retry-safe</li>
+        <li>Secrets use managed identity and Key Vault</li>
+        <li>Backups have a tested restore procedure</li>
+        <li>Per-tenant quotas and usage metering are enforced</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="architecture" role="tabpanel">
+      <h2>Target Azure architecture</h2>
+      <p class="lede">The request path stays lightweight. Uploads go directly to Blob Storage, metadata goes to PostgreSQL, and long-running rebuilds are queued. The web tier can then add or remove replicas without changing application state.</p>
+
+      <div class="diagram"><pre class="mermaid">
+flowchart LR
+  U[Team users] --> FD[Front Door + WAF]
+  FD --> APP[Container Apps\nFlask web/API]
+  APP --> ID[Microsoft Entra ID]
+  APP --> PG[(PostgreSQL\ntenants + objects + jobs)]
+  APP --> BLOB[(Blob Storage\ninputs + exports + backups)]
+  APP --> SB[Service Bus\nrebuild queue]
+  SB --> JOB[Container Apps worker/job\nExcel validation + build]
+  JOB --> BLOB
+  JOB --> PG
+  APP --> KV[Key Vault]
+  JOB --> KV
+  APP --> AI[Azure OpenAI / AI Search\noptional]
+  APP --> OBS[Application Insights]
+  JOB --> OBS
+
+  classDef edge fill:#dff3ef,stroke:#087f76,color:#17212b;
+  classDef data fill:#fff1cf,stroke:#a66b05,color:#17212b;
+  classDef compute fill:#e5f1fa,stroke:#1769aa,color:#17212b;
+  class APP,JOB compute; class PG,BLOB,SB data; class FD,ID,KV,OBS,AI edge;
+      </pre></div>
+
+      <div class="grid two">
+        <article class="card"><h3>Interactive request path</h3><p>Authenticate user → resolve tenant → authorize role → query PostgreSQL/cache → return tenant-filtered data. It should not parse workbooks, create ZIPs or wait for SAP.</p></article>
+        <article class="card coral"><h3>Background job path</h3><p>Issue direct-to-Blob upload → create job record → publish message → worker validates and rebuilds → commit new dataset version → notify UI through polling or push.</p></article>
+        <article class="card gold"><h3>Network path</h3><p>Use private endpoints for PostgreSQL, Storage, Key Vault and AI services. Give Container Apps controlled outbound traffic through a NAT Gateway when customers require IP allowlisting.</p></article>
+        <article class="card blue"><h3>SAP connectivity path</h3><p>For private SAP systems, use VPN/ExpressRoute or a customer-hosted connector that pushes approved extracts. Store each tenant's secret references in Key Vault, never in the shared database.</p></article>
+      </div>
+
+      <div class="callout warning"><div>!</div><div><strong>Do not mount one shared file system and call it scale</strong><p>Azure Files can provide a low-change bridge for a pilot, but process-level file locks, append-only JSONL and whole-file rewrites remain contention and corruption risks. It is a migration bridge, not the SaaS end state.</p></div></div>
+
+      <h3>Repository changes required</h3>
+      <div class="steps">
+        <div class="step"><div><h3>Introduce storage interfaces</h3><p>Create repository abstractions such as <code>ObjectRepository</code>, <code>FeedbackRepository</code>, <code>BlobRepository</code> and <code>JobRepository</code>. Keep local-file implementations for development and add Azure implementations behind configuration.</p></div></div>
+        <div class="step"><div><h3>Add tenant context middleware</h3><p>Validate the Entra token, resolve <code>tenant_id</code>, <code>user_id</code> and roles once, and pass that context to every repository and audit call.</p></div></div>
+        <div class="step"><div><h3>Version datasets</h3><p>Every successful rebuild creates an immutable dataset version. Switch the tenant's active version in one database transaction; never partially overwrite the live catalogue.</p></div></div>
+        <div class="step"><div><h3>Split web and worker images</h3><p>Use the same source image with separate commands. Web serves Flask; worker consumes jobs and runs <code>build_data.py</code> against Blob inputs and database output.</p></div></div>
+        <div class="step"><div><h3>Make all operations idempotent</h3><p>Assign job IDs, content hashes and version IDs. Replayed Service Bus messages must detect completed work rather than duplicate records.</p></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="data" role="tabpanel">
+      <h2>File-to-Azure data migration</h2>
+      <p class="lede">Do not put every JSON document into one database column. Choose storage by access pattern: blobs for large immutable content, relational tables for records that must be filtered or updated, and telemetry services for operational events.</p>
+
+      <table>
+        <thead><tr><th>Current store</th><th>Target</th><th>Target model</th><th>Migration notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>data.json</code>, <code>data.js</code></td><td>PostgreSQL + optional Blob export</td><td><code>datasets</code>, <code>objects</code>, <code>process_areas</code>, <code>dependencies</code></td><td>Persist normalized records by <code>tenant_id</code> and <code>dataset_version_id</code>. Generate downloadable JSON only when requested.</td></tr>
+          <tr><td>ABAP, BW and BPML Excel files</td><td>Blob Storage</td><td><code>tenants/{tenantId}/inputs/{jobId}/...</code></td><td>Keep original uploads immutable, record SHA-256, size, uploader, schema version and scan status in PostgreSQL.</td></tr>
+          <tr><td><code>manual_objects.json</code>, <code>object_edits.json</code></td><td>PostgreSQL</td><td><code>manual_objects</code>, <code>object_overrides</code></td><td>Use optimistic concurrency/version columns so simultaneous editors do not overwrite each other.</td></tr>
+          <tr><td>RSPLS, plan function and FOX mappings</td><td>PostgreSQL</td><td><code>mapping_rules</code> with type and effective version</td><td>Preserve provenance and allow tenant-specific rules plus platform defaults.</td></tr>
+          <tr><td><code>corrections.json</code></td><td>PostgreSQL</td><td><code>teachings</code></td><td>Store scope, author, timestamps and approval state. Never allow one tenant's teaching to influence another unless explicitly promoted as a global rule.</td></tr>
+          <tr><td><code>feedback.json</code></td><td>PostgreSQL</td><td><code>feedback</code></td><td>Add tenant, user, conversation/object reference and retention status.</td></tr>
+          <tr><td><code>usage.jsonl</code></td><td>Application Insights + PostgreSQL aggregate</td><td>Telemetry plus daily tenant usage totals</td><td>Use telemetry for diagnostics; write billing-grade counters through an idempotent metering pipeline.</td></tr>
+          <tr><td><code>audit_log.jsonl</code></td><td>PostgreSQL or immutable Log Analytics export</td><td><code>audit_events</code></td><td>Append-only, tenant-scoped, access-controlled and retained according to contract.</td></tr>
+          <tr><td><code>sap_packages.json</code></td><td>PostgreSQL/cache</td><td><code>sap_packages</code> by tenant and source system</td><td>Store source-system ID and refresh timestamp; expire stale snapshots.</td></tr>
+          <tr><td><code>backups/*.zip</code></td><td>Blob Storage</td><td>Versioned backup container</td><td>Use soft delete, versioning and lifecycle tiers. Keep the manifest, but reference PostgreSQL backup/version IDs rather than copying a live database into ZIP.</td></tr>
+          <tr><td><code>sap_config.json</code>, admin key</td><td>Key Vault + Entra roles</td><td>Secret references only</td><td>Replace the shared admin key with named identities and app roles. Rotate SAP credentials independently per tenant.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  actor User
+  participant Web as Flask API
+  participant Blob as Blob Storage
+  participant DB as PostgreSQL
+  participant Bus as Service Bus
+  participant Worker as Rebuild Worker
+  User->>Web: Request upload session
+  Web->>DB: Create job (Pending)
+  Web-->>User: Short-lived upload URL
+  User->>Blob: Upload Excel files directly
+  User->>Web: Complete upload
+  Web->>Bus: Publish job ID
+  Worker->>Bus: Receive job
+  Worker->>Blob: Read and validate inputs
+  Worker->>DB: Write new dataset version
+  Worker->>DB: Atomically activate version
+  Worker->>Blob: Write exports/manifest
+  Worker->>DB: Mark job Completed
+  User->>Web: Read job and active dataset
+      </pre></div>
+
+      <h3>Migration runbook</h3>
+      <div class="steps">
+        <div class="step"><div><h3>Inventory and freeze schemas</h3><p>Document each JSON shape and workbook schema. Add schema versions and validation tests before moving data.</p></div></div>
+        <div class="step"><div><h3>Create tenant and dataset tables</h3><p>Make <code>tenant_id</code> mandatory on all tenant-owned tables. Add composite indexes beginning with <code>tenant_id</code>.</p></div></div>
+        <div class="step"><div><h3>Build one-time importers</h3><p>Import current files as the first tenant and first dataset version. Reconcile counts, dependency edges, mappings and hashes against the existing application.</p></div></div>
+        <div class="step"><div><h3>Dual-read during verification</h3><p>In a non-production environment, compare file-backed and Azure-backed API responses for representative searches, process tiles and object details.</p></div></div>
+        <div class="step"><div><h3>Cut over writes</h3><p>Stop file writes, take a final snapshot, import deltas, switch repository configuration, run smoke tests and keep a documented rollback window.</p></div></div>
+        <div class="step"><div><h3>Retire file state</h3><p>After reconciliation and restore testing, remove writable local volume assumptions. Keep local repositories only for developer mode and automated tests.</p></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="tenancy" role="tabpanel">
+      <h2>Design tenant isolation before onboarding team two</h2>
+      <p class="lede">A tenant represents a customer team or organization. Identity, data, jobs, files, secrets, quotas and audit records must all resolve through the same immutable tenant identifier.</p>
+
+      <div class="grid">
+        <article class="card"><h3>Shared application</h3><p>All tenants use the same Container App and code revision. This keeps delivery simple and efficient.</p><span class="pill">Recommended default</span></article>
+        <article class="card gold"><h3>Shared database, isolated rows</h3><p>All tenant-owned tables include <code>tenant_id</code>. Enforce filters in repositories and PostgreSQL row-level security as defense in depth.</p><span class="pill">SMB / team tier</span></article>
+        <article class="card coral"><h3>Deployment stamps</h3><p>Large or regulated customers receive a dedicated database/storage stamp while the control plane routes them to the right stamp.</p><span class="pill">Enterprise tier</span></article>
+      </div>
+
+      <div class="band"><div class="band-inner">
+        <h3>Core SaaS control-plane records</h3>
+        <table>
+          <thead><tr><th>Entity</th><th>Purpose</th><th>Minimum fields</th></tr></thead>
+          <tbody>
+            <tr><td>Tenant</td><td>Customer boundary and lifecycle</td><td>ID, name, status, service tier, region, data stamp, retention policy</td></tr>
+            <tr><td>Membership</td><td>User-to-tenant authorization</td><td>Tenant ID, Entra subject ID, role, invited/active status</td></tr>
+            <tr><td>Source system</td><td>SAP environment identity</td><td>Tenant ID, system alias, client, connectivity mode, Key Vault secret reference</td></tr>
+            <tr><td>Dataset</td><td>Immutable rebuilt catalogue version</td><td>Tenant ID, version, job ID, state, source hashes, active timestamp</td></tr>
+            <tr><td>Job</td><td>Durable ingestion/rebuild progress</td><td>Tenant ID, type, state, attempt, timestamps, error code, correlation ID</td></tr>
+            <tr><td>Entitlement</td><td>Commercial limits</td><td>Plan, users, storage, rebuilds/month, AI token allowance, retention</td></tr>
+            <tr><td>Usage meter</td><td>Billing and capacity signals</td><td>Tenant ID, metric, quantity, period, idempotency key</td></tr>
+          </tbody>
+        </table>
+      </div></div>
+
+      <h3>Authorization flow</h3>
+      <div class="steps">
+        <div class="step"><div><h3>Authenticate</h3><p>Validate Microsoft Entra issuer, audience, signature, expiry and subject. Do not trust a tenant ID supplied only in a URL or request body.</p></div></div>
+        <div class="step"><div><h3>Resolve membership</h3><p>Map the authenticated subject to an active SaaS membership and tenant. For users in several teams, require an explicit tenant switch.</p></div></div>
+        <div class="step"><div><h3>Authorize capability</h3><p>Use roles such as Tenant Admin, Data Manager, Analyst and Viewer. Keep platform operations separate from tenant administration.</p></div></div>
+        <div class="step"><div><h3>Constrain data access</h3><p>Repository methods require tenant context; Blob paths start with tenant ID; Service Bus messages contain signed/internal tenant context; database RLS blocks cross-tenant rows.</p></div></div>
+        <div class="step"><div><h3>Audit</h3><p>Record actor, tenant, action, target, outcome, correlation ID and timestamp for uploads, rebuilds, restores, role changes, exports and SAP access.</p></div></div>
+      </div>
+
+      <div class="callout warning"><div>!</div><div><strong>Backups are also tenant data</strong><p>The current full-application ZIP is useful for a single installation. In SaaS, provide tenant-scoped export/restore and platform-level disaster recovery separately. A tenant administrator must never list or restore another tenant's snapshot.</p></div></div>
+    </section>
+
+    <section class="panel" id="scale" role="tabpanel">
+      <h2>Scale on measured bottlenecks</h2>
+      <p class="lede">Horizontal web scaling becomes safe after state is externalized. Worker scaling, database tuning and regional expansion should then follow real queue, latency, storage and tenancy signals.</p>
+
+      <div class="scale-row"><strong>Pilot<br>1–5 teams</strong><div><h3>Topology</h3><p>One region, one Container App, one worker, PostgreSQL, Blob Storage and Service Bus. Minimum one web replica.</p></div><div><h3>Focus</h3><p>Tenant isolation, schema validation, restore drills, cost telemetry and product usage.</p></div></div>
+      <div class="scale-row"><strong>Growth<br>5–50 teams</strong><div><h3>Topology</h3><p>Minimum two web replicas, HTTP autoscaling, queue-based worker autoscaling, database HA, Front Door/WAF and Azure Managed Redis if measured caching need exists.</p></div><div><h3>Focus</h3><p>p95 latency, noisy-neighbor quotas, connection pooling, job concurrency, dead-letter handling and support runbooks.</p></div></div>
+      <div class="scale-row"><strong>Enterprise<br>50+ teams</strong><div><h3>Topology</h3><p>Regional deployment stamps, tenant routing, dedicated stamps for regulated customers, AI Search partitions and read replicas where justified.</p></div><div><h3>Focus</h3><p>Data residency, capacity automation, regional failover, contractual RTO/RPO and per-tenant cost allocation.</p></div></div>
+
+      <div class="diagram"><pre class="mermaid">
+flowchart TB
+  METRICS[Observe: p95 latency, CPU, queue age, DB load, tenant usage]
+  METRICS --> WEB{HTTP saturation?}
+  WEB -->|Yes| SCALEWEB[Add stateless web replicas]
+  METRICS --> QUEUE{Queue age rising?}
+  QUEUE -->|Yes| SCALEJOB[Add workers within per-tenant concurrency limits]
+  METRICS --> DB{Database bottleneck?}
+  DB -->|Connections| POOL[Pool and cap connections]
+  DB -->|Queries| INDEX[Index and optimize tenant-scoped queries]
+  DB -->|Capacity| SCALEDB[Scale compute / add read path]
+  METRICS --> REGION{Residency or regional load?}
+  REGION -->|Yes| STAMP[Add regional deployment stamp]
+      </pre></div>
+
+      <div class="grid two">
+        <article class="card"><h3>Container Apps scaling</h3><p>Scale the web tier on concurrent HTTP requests. Set minimum replicas to 2 for production availability and maximum replicas from a tested PostgreSQL connection budget.</p></article>
+        <article class="card coral"><h3>Worker scaling</h3><p>Scale on Service Bus queue length/age. Cap total and per-tenant concurrency because workbook parsing is memory-heavy and one customer must not consume all workers.</p></article>
+        <article class="card gold"><h3>Database scaling</h3><p>Use connection pooling, bounded application pools, tenant-leading indexes and pagination. Archive old dataset versions according to policy before increasing compute.</p></article>
+        <article class="card blue"><h3>Blob scaling</h3><p>Upload directly with short-lived scoped URLs, use lifecycle rules for cool/archive tiers, and avoid proxying large files through Flask replicas.</p></article>
+      </div>
+
+      <div class="band"><div class="band-inner">
+        <h3>Production service objectives</h3>
+        <table>
+          <thead><tr><th>Signal</th><th>Initial objective</th><th>Alert / scale trigger</th><th>Response</th></tr></thead>
+          <tbody>
+            <tr><td>Interactive availability</td><td>99.9% monthly after production launch</td><td>Failed request rate or health probe failures</td><td>Revision rollback, replica recovery, dependency triage</td></tr>
+            <tr><td>API latency</td><td>p95 under 1 second for catalogue reads</td><td>p95 above target for 10 minutes</td><td>Inspect DB dependencies, query plan, cache hit rate and replica load</td></tr>
+            <tr><td>Rebuild start</td><td>95% begin within 2 minutes</td><td>Oldest queue message above 2 minutes</td><td>Scale workers; inspect poisoned jobs and tenant concurrency</td></tr>
+            <tr><td>Rebuild completion</td><td>Defined by workbook size class</td><td>Runtime exceeds size-class baseline</td><td>Trace parsing phase, memory, DB bulk writes and Blob throughput</td></tr>
+            <tr><td>Recovery point</td><td>Database PITR ≤ 15 minutes; Blob versioning</td><td>Backup/replication health failure</td><td>Block risky releases; repair protection before normal operation</td></tr>
+            <tr><td>Recovery time</td><td>4 hours initially, lower for enterprise tier</td><td>Quarterly restore drill misses RTO</td><td>Automate restore and revise architecture/capacity</td></tr>
+          </tbody>
+        </table>
+      </div></div>
+
+      <h3>Operational controls</h3>
+      <ul class="checklist">
+        <li>Application Insights distributed tracing</li><li>Correlation ID from request through worker</li>
+        <li>Health, readiness and dependency probes</li><li>Service Bus dead-letter alerts and replay tooling</li>
+        <li>PostgreSQL slow-query and connection alerts</li><li>Blob capacity and failed operation alerts</li>
+        <li>Per-tenant usage and error dashboards</li><li>Feature flags for risky capabilities</li>
+        <li>Automated dependency and image scanning</li><li>Monthly cost budgets and anomaly alerts</li>
+        <li>Quarterly restore and failover exercises</li><li>Documented incident and tenant-notification runbooks</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="delivery" role="tabpanel">
+      <h2>Phased delivery roadmap</h2>
+      <p class="lede">Time ranges are planning estimates for a small product team and should be recalibrated after a technical spike. Each phase has an exit condition; avoid adding AI sophistication before tenancy and data correctness are proven.</p>
+
+      <div class="phase"><div class="phase-label">Phase 0<br>Product decisions</div><div><h3>Define the SaaS contract</h3><ul><li>Choose tenant definition, target customer, regions and data residency.</li><li>Define supported workbook schemas, maximum sizes and rebuild SLA.</li><li>Define roles, retention, export/deletion, plans and usage limits.</li><li>Choose input-files-only MVP versus direct SAP connectivity.</li></ul></div><div class="phase-time">1–2 weeks<br><strong>Exit:</strong> approved product and threat model</div></div>
+
+      <div class="phase"><div class="phase-label">Phase 1<br>Cloud foundation</div><div><h3>Deploy the current app safely</h3><ul><li>Create dev/test/prod subscriptions or resource groups and infrastructure as code.</li><li>Build image in Azure Container Registry; deploy Container Apps with managed identity.</li><li>Add Key Vault, Application Insights, Log Analytics and CI/CD using workload identity federation.</li><li>Use temporary persistent storage only for migration testing, not as the final SaaS model.</li></ul></div><div class="phase-time">2–3 weeks<br><strong>Exit:</strong> repeatable non-production deployment</div></div>
+
+      <div class="phase"><div class="phase-label">Phase 2<br>Externalize state</div><div><h3>Replace mutable local files</h3><ul><li>Add repository interfaces and PostgreSQL schema.</li><li>Move source workbooks, exports and backup artifacts to private Blob Storage.</li><li>Migrate corrections, edits, mappings, feedback, jobs and audits to PostgreSQL.</li><li>Import the current installation and reconcile every object count.</li></ul></div><div class="phase-time">4–6 weeks<br><strong>Exit:</strong> container filesystem is read-only/ephemeral</div></div>
+
+      <div class="phase"><div class="phase-label">Phase 3<br>Multi-tenancy</div><div><h3>Onboard teams securely</h3><ul><li>Add Entra authentication, tenant membership and application roles.</li><li>Enforce tenant context in database, Blob paths, jobs, logs and exports.</li><li>Create tenant admin onboarding, quota and retention workflows.</li><li>Run automated cross-tenant isolation and authorization tests.</li></ul></div><div class="phase-time">4–6 weeks<br><strong>Exit:</strong> independent test tenants pass isolation tests</div></div>
+
+      <div class="phase"><div class="phase-label">Phase 4<br>Async rebuild</div><div><h3>Separate ingestion from web traffic</h3><ul><li>Add direct Blob uploads, job records, Service Bus and worker process.</li><li>Add workbook malware scanning, schema validation, content hashes and idempotency.</li><li>Publish immutable dataset versions and atomically activate successful versions.</li><li>Add progress, retry, cancel and dead-letter administration.</li></ul></div><div class="phase-time">3–5 weeks<br><strong>Exit:</strong> rebuild survives web restarts and message replay</div></div>
+
+      <div class="phase"><div class="phase-label">Phase 5<br>Production hardening</div><div><h3>Prove reliability and security</h3><ul><li>Add Front Door/WAF, private endpoints, network controls and Defender scanning.</li><li>Load-test realistic tenants, uploads and concurrent rebuilds.</li><li>Test PostgreSQL PITR, Blob recovery, tenant export and disaster runbooks.</li><li>Add SLO dashboards, alerts, budgets, support procedures and privacy controls.</li></ul></div><div class="phase-time">3–4 weeks<br><strong>Exit:</strong> launch checklist and restore drill approved</div></div>
+
+      <div class="phase"><div class="phase-label">Phase 6<br>Scale & intelligence</div><div><h3>Add only measured capabilities</h3><ul><li>Introduce Azure Managed Redis when repeated query load justifies it.</li><li>Add Azure AI Search for semantic/hybrid retrieval over large catalogues.</li><li>Add deployment stamps for regional residency or dedicated enterprise isolation.</li><li>Build metering, subscriptions, billing integration and customer-facing usage views.</li></ul></div><div class="phase-time">Continuous<br><strong>Exit:</strong> driven by usage and contracts</div></div>
+
+      <div class="callout decision"><div>◆</div><div><strong>Practical first release</strong><p>For the fastest responsible SaaS MVP, complete Phases 0–4 for uploaded workbooks, run in one Azure region, and defer live SAP connectivity, multi-region active/active, AI Search and billing automation. Those features add material complexity but are not required to prove reusable team value.</p></div></div>
+
+      <div class="band"><div class="band-inner">
+        <h3>Implementation workstreams</h3>
+        <div class="grid">
+          <article class="card"><h3>Application</h3><p>Repositories, tenant middleware, dataset versioning, job APIs, role-based UI and migration tooling.</p></article>
+          <article class="card coral"><h3>Platform</h3><p>Bicep/Terraform, environments, Container Apps, networking, managed identities, policies and CI/CD.</p></article>
+          <article class="card gold"><h3>Data</h3><p>PostgreSQL schema, Blob layout, import/reconciliation, indexes, retention, backup and restore.</p></article>
+          <article class="card blue"><h3>Security</h3><p>Threat model, Entra roles, Key Vault, tenant-isolation tests, WAF, scanning and audit controls.</p></article>
+          <article class="card"><h3>Operations</h3><p>SLOs, telemetry, alerts, load tests, incident response, capacity, cost and recovery drills.</p></article>
+          <article class="card coral"><h3>Product</h3><p>Onboarding, service tiers, limits, support model, privacy terms, data lifecycle and SAP connector strategy.</p></article>
+        </div>
+      </div></div>
+
+      <h3>Before production approval</h3>
+      <ul class="checklist">
+        <li>Infrastructure recreated from code in a clean environment</li><li>No secrets in source, image, logs or client storage</li>
+        <li>Two test tenants cannot access each other's rows or blobs</li><li>Rebuild replay produces one correct dataset version</li>
+        <li>Failed rebuild never replaces the active dataset</li><li>Database and Blob restore tested within target RTO</li>
+        <li>Scale test validates DB connection budget</li><li>Large uploads bypass the Flask request body</li>
+        <li>Usage limits prevent noisy-neighbor exhaustion</li><li>Tenant deletion/export workflow is tested</li>
+        <li>Operational dashboards and paging routes are owned</li><li>Cost budgets and service ownership are documented</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>Planning document · SAP Knowledge Copilot · Azure SaaS deployment roadmap · 30 July 2026</footer>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({startOnLoad:false,securityLevel:'strict',theme:'base',themeVariables:{fontFamily:'Bahnschrift, Aptos, sans-serif',primaryColor:'#dff3ef',primaryTextColor:'#17212b',primaryBorderColor:'#087f76',lineColor:'#5d6974',secondaryColor:'#fff1cf',tertiaryColor:'#e5f1fa'}});
+
+    const tabs=[...document.querySelectorAll('.tab')];
+    const panels=[...document.querySelectorAll('.panel')];
+    async function renderPanel(panel){
+      const diagrams=[...panel.querySelectorAll('.mermaid:not([data-processed="true"])')];
+      if(diagrams.length) await mermaid.run({nodes:diagrams});
+    }
+    tabs.forEach(tab=>tab.addEventListener('click',async()=>{
+      tabs.forEach(item=>item.setAttribute('aria-selected',String(item===tab)));
+      panels.forEach(panel=>panel.classList.toggle('active',panel.id===tab.getAttribute('aria-controls')));
+      const panel=document.getElementById(tab.getAttribute('aria-controls'));
+      setTimeout(()=>renderPanel(panel),0);
+    }));
+    renderPanel(document.querySelector('.panel.active'));
+  </script>
+</body>
+</html>

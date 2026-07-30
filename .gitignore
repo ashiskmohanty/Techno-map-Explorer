@@ -16,6 +16,7 @@ object_edits.json
 audit_log.jsonl
 sap_packages.json
 exports/
+backups/
 *.bak
 
 # --- Python ---
@@ -26,5 +27,6 @@ venv/
 
 # --- Editor / OS ---
 .vscode/
+*.code-workspace
 .DS_Store
 Thumbs.db
